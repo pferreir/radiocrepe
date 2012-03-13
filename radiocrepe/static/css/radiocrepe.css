@@ -1,0 +1,123 @@
+html {
+    background: #444;
+}
+
+a {
+    color: #5566ff;
+    text-decoration: none;
+}
+
+body {
+    width: 600px;
+    background-color: #f3f3f3;
+    margin: auto;
+    margin-top: 10px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    color: #222;
+    font-family: Share;
+}
+
+.carved {
+    background: #eee;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    box-shadow: 0px 1px 2px 1px #fff;
+    color: #666;
+}
+
+h1 {
+    padding: 0px;
+    margin: 0;
+}
+
+h2 {
+    margin: 0;
+    font-size: 18px;
+    margin: 15px 0 0 0;
+}
+
+ul.song_list {
+    padding: 0;
+}
+
+ul.song_list li {
+    padding: 5px;
+    margin-bottom: 5px;
+    list-style-type: none;
+    width: 400px;
+
+    background: #eee;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    box-shadow: 0px 1px 2px 1px #fff;
+    color: #666;
+
+}
+
+.download_link {
+    font-size: 12px;
+}
+
+ul.song_list li .download_link {
+    float: right;
+}
+
+ul.song_list li .title {
+    display: inline-block;
+    max-width: 230px;
+    margin-left: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+ul.song_list li .artist {
+    font-weight: bold;
+}
+
+#now_playing_box {
+    padding: 10px;
+    overflow: auto;
+    color: #444;
+}
+
+h2#queued_up {
+    color: #bbb;
+}
+
+h2#now_playing {
+    margin-bottom: 10px;
+}
+
+#now {
+    float:left;
+}
+
+#now .title {
+    display: block;
+    font-size: 20px;
+    color: #777;
+}
+
+#now .artist {
+    display: block;
+    font-size: 30px;
+}
+
+#now .download_link {
+    display: inline-block;
+    margin: 10px 0 0 0;
+}
+
+#add_box {
+    padding-bottom: 10px;
+}
+
+#picture {
+    float: right;
+}
+
+#now_playing {
+    color: #bbb;
+}

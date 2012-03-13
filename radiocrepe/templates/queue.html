@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="{{url_for('static', filename='css/radiocrepe.css')}}" />
+  <link href='http://fonts.googleapis.com/css?family=Share' rel='stylesheet' type='text/css'>
+
+
+  <script src="{{url_for('static', filename='js/jquery.js')}}"></script>
+  <script src="{{url_for('static', filename='js/underscore-min.js')}}"></script>
+  <script src="{{url_for('static', filename='js/backbone.js')}}"></script>
+  <script src="{{url_for('static', filename='js/handlebars.js')}}"></script>
+
+  <script id="song_template" type="text/x-handlebars-template">
+  {% raw %}
+    <span class="artist">{{ artist }}</span>
+    <span class="title">{{ title }}</span>
+    <a href="/song/{{ uid }}" class="download_link">download</a>
+  {% endraw %}
+  </script>
+
+</head>
+<body>
+  <h1>{{title}}</h1>
+  <h2 id="now_playing">now playing</h2>
+  <div id="now_playing_box" class="carved">
+     <img id="picture"/>
+     <div id="now"></div>
+  </div>
+  <h2 id="queued_up">queued up</h2>
+  <ul class="song_list">
+  </ul>
+  <div id="add_box">
+    <input type="text" id="term"/>
+    <button id="play">Play!</button>
+  </div>
+  <script src="{{url_for('static', filename='js/radiocrepe.js')}}"></script>
+</body>
+</html>
