@@ -5,7 +5,7 @@ setup(
     version = "0.0.1",
     author = "Pedro Ferreira",
     author_email = "ilzogoiby@gmail.com",
-    description = ("A 'GitHub Play'-inspired office radio client/server app"),
+    description = ("An office jukebox"),
     license = "BSD",
     keywords = "radio play music",
     url = "http://github.com/pferreir",
