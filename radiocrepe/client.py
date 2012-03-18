@@ -25,12 +25,20 @@ class HTTPClient(object):
         except HTTPError:
             return False
 
-    def ask_next(self):
+    def notify_start(self):
         try:
-            with closing(urlopen(self._surl + '/next', '')) as d:
+            with closing(urlopen(self._surl + '/notify/start', '')) as d:
                 data = json.load(d)
                 success = d.code == 200
             return data
+        except HTTPError:
+            return False
+
+    def notify_stop(self):
+        try:
+            with closing(urlopen(self._surl + '/notify/stop', '')) as d:
+                success = d.code == 200
+            return True
         except HTTPError:
             return False
 
@@ -60,7 +68,7 @@ class Content(object):
 
     def _sync(self):
         for f in glob(os.path.join(self._content_dir, '*.sng')):
-            f = re.split(r'\.|/', f)[1]
+            f = re.split(r'\.|/', f)[-2]
             self._songs[f] = self._read_hdr(os.path.join(
                 self._content_dir, f + '.hdr'))
 
@@ -90,6 +98,7 @@ class Client(object):
         self._content = Content(content_dir)
         self._thread = Thread(target=self._background)
         self._exit = False
+        self._last = None
 
     def _background(self):
         """
@@ -99,7 +108,7 @@ class Client(object):
             q = self._httpc.get_queue()
             for meta in q:
                 self.download(meta)
-            time.sleep(10)
+            time.sleep(30)
 
     def initialize(self):
         # start background thread
@@ -112,11 +121,23 @@ class Client(object):
 
     def iter_songs(self):
         while not self._exit:
-            res = self._httpc.ask_next()
-            if res:
-                yield res
+            queue = self._httpc.get_queue()
+            if queue:
+                for meta in queue:
+                    if not self._last or \
+                      meta['time'] > self._last['time']:
+                        print 'enqueueing', meta
+                        yield meta
+                        self._last = meta
             else:
                 yield None
+            time.sleep(5)
+
+    def notify_start(self):
+        self._httpc.notify_start()
+
+    def notify_stop(self):
+        self._httpc.notify_stop()
 
     def download(self, meta, force=False):
         uid = meta['uid']

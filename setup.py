@@ -13,6 +13,11 @@ setup(
     long_description=open('README.md', 'r').read(),
     classifiers=[
     ],
+    include_package_data=True,
+    package_data={
+        'radiocrepe': ['*.sql']
+    },
     install_requires=['mutagen', 'Flask', 'python-magic'],
     entry_points={'console_scripts': "radiocrepe=radiocrepe.main:main"},
-    dependency_links=[])
+    dependency_links=[],
+    zip_safe=False)

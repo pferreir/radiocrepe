@@ -1,105 +1,29 @@
 import os
-import magic
-import hashlib
-from collections import defaultdict
 from urllib import urlencode, unquote
 from urllib2 import urlopen
 import random
 import copy
 import time
 
-from mutagen.flac import FLAC
-from mutagen.easyid3 import EasyID3
-from mutagen.id3 import ID3NoHeaderError
 
 from contextlib import closing
+
+import ConfigParser
+
+from radiocrepe.storage import Storage
 
 from flask import Flask, jsonify, request, Response, render_template, json, g
 app = Flask(__name__)
 
 
-index_uid_meta = {}
-index_artist_uid = defaultdict(list)
-index_title_uid = defaultdict(list)
-index_album_uid = defaultdict(list)
-
 queue = []
 playing = None
 
 
-def make_key(term):
-    if term is None:
-        return None
-    else:
-        return filter(term.__class__.isalnum, term.lower().replace(' ', ''))
-
-
-def flac_read(fpath):
-    audio = FLAC(fpath)
-    audio.pprint()
-    return {
-        'artist': audio.get('artist', [None])[0],
-        'album': audio.get('album', [None])[0],
-        'title': audio.get('title', [None])[0]
-        }
-
-
-def id3_read(fpath):
-    try:
-        audio = EasyID3(fpath)
-    except ID3NoHeaderError:
-        return None
-    return {
-        'artist': audio['artist'][0],
-        'album': audio.get('album', [None])[0],
-        'title': audio['title'][0]
-        }
-
-
-MIME_TYPES = {
-    'audio/mpeg': id3_read,
-    'audio/x-flac': flac_read
-    }
-
-
-def index_file(fpath, mtype):
-    mdata = MIME_TYPES[mtype](fpath)
-
-    if not mdata:
-        return
-
-    d = {}
-
-    for (k, v) in mdata.iteritems():
-        if isinstance(v, unicode):
-            v = v.encode('utf-8')
-        d[k] = v if v else ''
-
-    uid = hashlib.sha1(urlencode(d)).hexdigest()
-    print(uid)
-    mdata.update({
-        'fpath': fpath,
-        'uid': uid,
-        'mime': mtype
-    })
-    index_uid_meta[uid] = mdata
-
-    k = make_key(mdata['artist'])
-    if k:
-        index_artist_uid[k].append(uid)
-
-    k = make_key(mdata['title'])
-    if k:
-        index_title_uid[k].append(uid)
-
-    k = make_key(mdata['album'])
-    if k:
-        index_album_uid[k].append(uid)
-
-
 @app.route('/song/<uid>')
 def song(uid):
-    meta = index_uid_meta.get(uid, None)
+    storage = Storage.get(app.config)
+    meta = storage.get('index_uid_meta', uid, None)
     if meta is None:
         return 'song not found', 404
     else:
@@ -112,7 +36,7 @@ def song(uid):
 @app.route('/enqueue', methods=['POST'])
 def enqueue():
     uid = request.form['uid']
-    if uid in index_uid_meta:
+    if uid in storage:
         queue.append((time.time(), uid))
         return jsonify({'id': uid})
     else:
@@ -121,24 +45,30 @@ def enqueue():
         return jsonify(), 404
 
 
-@app.route('/next', methods=['POST'])
-def _next():
+@app.route('/notify/start', methods=['POST'])
+def _notify_start():
     global playing
-    if len(queue):
+    try:
         playing = queue.pop(0)
-        print playing
-        return jsonify(index_uid_meta[playing[1]])
-    else:
-        playing = None
+        return json.dumps(len(queue))
+    except IndexError:
         return Response(jsonify(result='ERR_NO_NEXT').data,
                         mimetype='application/json', status=404)
 
 
+@app.route('/notify/stop', methods=['POST'])
+def _notify_stop():
+    global playing
+    playing = None
+    return ''
+
+
 @app.route('/queue')
 def _queue():
+    storage = Storage.bind(app.config)
     res = []
     for ts, uid in queue:
-        elem = copy.copy(index_uid_meta[uid])
+        elem = storage.get('index_uid_meta', uid, None)
         elem['uid'] = uid
         elem['time'] = ts
         res.append(elem)
@@ -148,7 +78,8 @@ def _queue():
 @app.route('/playing')
 def _playing():
     if playing:
-        meta = index_uid_meta.get(playing[1], None)
+        storage = Storage.bind(app.config)
+        meta = storage.get('index_uid_meta', playing[1], None)
         meta['time'] = playing[0]
     else:
         meta = None
@@ -158,7 +89,7 @@ def _playing():
 
 @app.route('/artist/<name>')
 def artist_info(name):
-    if app.config['lastfm_key']:
+    if app.config.get('lastfm_key'):
         params = {
             'method': 'artist.getinfo',
             'artist': name,
@@ -180,20 +111,20 @@ def index():
 
 @app.route('/play/<term>', methods=['POST'])
 def _search(term):
-    term = make_key(unquote(term))
-    res = set()
-    for title, uid in index_title_uid.iteritems():
-        if term.encode('utf-8') in title:
-            res |= set(uid)
-    for artist, uid in index_artist_uid.iteritems():
-        if term.encode('utf-8') in artist:
-            res |= set(uid)
+    storage = Storage.bind(app.config)
+
+    term = unquote(term)
+
+    res = set(storage.get('index_artist_uid', term, like=True))
+    res |= set(storage.get('index_title_uid', term, like=True))
+
+    print res
 
     if res:
         ts = time.time()
         uid = random.choice(list(res))
         queue.append((ts, uid))
-        meta = copy.copy(index_uid_meta[uid])
+        meta = storage.get('index_uid_meta', uid, None)
         meta['time'] = ts
         return jsonify(meta)
     else:
@@ -205,15 +136,29 @@ def jump_next():
     queue.pop(0)
 
 
-def main(music_dir, host='localhost', port=5000, lastfm_key=None, title='Radiocrepe'):
-    for dirpath, dirnames, filenames in os.walk(music_dir):
-        for fname in filenames:
-                mime = magic.Magic(mime=True)
-                fpath = os.path.join(dirpath, fname)
-                mtype = mime.from_file(fpath)
-                if mtype in MIME_TYPES:
-                    index_file(fpath, mtype)
+def main(args):
+    config = dict(host='localhost',
+                  port=5000,
+                  title='Radiocrepe',
+                  content_dir='.')
 
-    app.config['lastfm_key'] = lastfm_key
-    app.config['title'] = title
-    app.run(debug=True, host=host, port=port)
+    if args.c:
+        config_ini = ConfigParser.ConfigParser()
+        config_ini.read(args.c)
+
+        for section in config_ini.sections():
+            for k, v in config_ini.items(section):
+                if v:
+                    config[k] = v
+
+    for k, v in args.__dict__.iteritems():
+        if v is not None:
+            config[k] = v
+
+    app.config.update(config)
+
+    storage = Storage.bind(config)
+    storage.initialize()
+    storage.update()
+
+    app.run(debug=True, host=config['host'], port=config['port'])
