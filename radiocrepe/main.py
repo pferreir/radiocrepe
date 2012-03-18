@@ -15,10 +15,10 @@ def main():
     server_parser.set_defaults(action='server')
     server_parser.add_argument('--content_dir')
     server_parser.add_argument('-c')
-    server_parser.add_argument('--port', default=5000)
-    server_parser.add_argument('--host', default='localhost')
+    server_parser.add_argument('--port')
+    server_parser.add_argument('--host')
     server_parser.add_argument('--lastfm-key')
-    server_parser.add_argument('--title', default='Radiocrepe')
+    server_parser.add_argument('--title')
 
     player_parser = subparsers.add_parser('player', help='start a player')
     player_parser.set_defaults(action='player')

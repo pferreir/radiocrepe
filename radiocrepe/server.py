@@ -118,8 +118,6 @@ def _search(term):
     res = set(storage.get('index_artist_uid', term, like=True))
     res |= set(storage.get('index_title_uid', term, like=True))
 
-    print res
-
     if res:
         ts = time.time()
         uid = random.choice(list(res))
@@ -161,4 +159,4 @@ def main(args):
     storage.initialize()
     storage.update()
 
-    app.run(debug=True, host=config['host'], port=config['port'])
+    app.run(debug=True, host=config['host'], port=int(config['port']))
