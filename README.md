@@ -5,9 +5,11 @@
 
 Start a server:
 
-    $ radiocrepe server ~/Music --title='My office jukebox'
+    $ radiocrepe server -c config.ini
 
-If you have a last.fm API key you can add `--lastfm-key=<YOUR_KEY>` for extra awesomeness (pictures!)
+There is a `radiocrepe.ini` file in the source code that you can adapt to your needs.
+
+If you have a last.fm API key you can use the option `lastfm_key` for extra awesomeness (pictures!)
 
 Start a player somewhere else:
 
