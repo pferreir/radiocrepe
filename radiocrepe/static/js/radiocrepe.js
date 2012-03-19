@@ -2,6 +2,19 @@ $(function() {
     var song_template = Handlebars.compile($("#song_template").html());
     var prev_result = {time: 0};
 
+    function search() {
+        $.ajax({url: '/play/' + encodeURI($('#term').val()),
+                type: 'POST',
+                success: function(result) {
+                    collection.add(result);
+                    $('#term').val('').focus();
+                },
+               error: function() {
+                   alert('Sorry, nothing found');
+                   $('#term').focus()
+                }})
+    }
+
     var Item = Backbone.Model.extend({
     });
   
@@ -61,17 +74,11 @@ $(function() {
         collection: collection
     });
     
-    $('#play').click(function() {
-        $.ajax({url: '/play/' + encodeURI($('#term').val()),
-                type: 'POST',
-                success: function(result) {
-                    collection.add(result);
-                    $('#term').val('').focus();
-                },
-               error: function() {
-                   alert('Sorry, nothing found');
-                   $('#term').focus()
-                }})
+    $('#play').click(search);
+    $('#term').keypress(function(e){
+        if(e.which == 13){
+            search();
+        }
     });
 
     function update_artist_info(artist) {
