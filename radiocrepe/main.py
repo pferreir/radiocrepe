@@ -3,12 +3,21 @@ from radiocrepe import server
 from radiocrepe import player
 
 import ConfigParser
+import logging
 
 
 def main():
 
+    root_logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(
+        '%(asctime)-15s %(message)s'))
+    handler.setLevel(logging.INFO)
+    root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description='A simple office DJ')
+
     subparsers = parser.add_subparsers(help='sub-command help')
 
     server_parser = subparsers.add_parser('server', help='start an HTTP server')
@@ -19,6 +28,7 @@ def main():
     server_parser.add_argument('--host')
     server_parser.add_argument('--lastfm-key')
     server_parser.add_argument('--title')
+    server_parser.add_argument('--debug', action='store_const', const=True)
 
     player_parser = subparsers.add_parser('player', help='start a player')
     player_parser.set_defaults(action='player')
@@ -30,6 +40,6 @@ def main():
     args = parser.parse_args()
 
     if args.action == 'server':
-        server.main(args)
+        server.main(args, root_logger, handler)
     else:
         player.main(args)

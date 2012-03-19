@@ -19,9 +19,9 @@ def id3_read(fpath):
     except ID3NoHeaderError:
         return None
     return {
-        'artist': audio['artist'][0],
+        'artist': audio.get('artist', [None])[0],
         'album': audio.get('album', [None])[0],
-        'title': audio['title'][0]
+        'title': audio.get('title', [None])[0]
         }
 
 

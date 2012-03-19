@@ -4,6 +4,7 @@ import hashlib
 import os
 from urllib import urlencode
 import json
+import logging
 
 # 3rd party
 import magic
@@ -30,12 +31,14 @@ class Storage(object):
         self._conn = sqlite3.connect(os.path.join(
             config['content_dir'], 'songs.db'))
         self._config = config
+        self._logger = logging.getLogger('radiocrepe.storage')
 
     def initialize(self):
         c = self._conn.cursor()
         r = c.execute('SELECT COUNT(*) FROM SQLITE_MASTER;')
 
         if r.fetchone()[0] <= 0:
+            self._logger.warning('Database empty - creating from scratch')
             deftables = pkg_resources.resource_string('radiocrepe', 'tables.sql')
             for st in deftables.split('\n\n'):
                 c.execute(st)
@@ -58,6 +61,8 @@ class Storage(object):
             keys[k] = v if v else ''
 
         uid = hashlib.sha1(urlencode(keys)).hexdigest()
+
+        self._logger.debug('Indexing %s (%s)' % (uid, os.path.basename(fpath)))
 
         c = self._conn.cursor()
         r = c.execute('SELECT * FROM index_uid_meta WHERE key = ?;', (uid,))
@@ -113,6 +118,7 @@ class Storage(object):
         return not not r.fetchone()
 
     def update(self):
+        self._logger.info('Updating DB')
         cdir = self._config['content_dir']
         for dirpath, dirnames, filenames in os.walk(cdir):
             for fname in filenames:
@@ -126,3 +132,8 @@ class Storage(object):
                         self._index_file(
                             os.path.relpath(fpath, cdir),
                             meta)
+        self._logger.info('DB update finished')
+
+    def file(self, uid):
+        meta = self.get('index_uid_meta', uid)
+        return open(os.path.join(self._config['content_dir'], meta['fpath']))

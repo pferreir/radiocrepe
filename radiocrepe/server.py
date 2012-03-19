@@ -1,18 +1,20 @@
+# stdlib
 import os
 from urllib import urlencode, unquote
 from urllib2 import urlopen
 import random
-import copy
 import time
-
-
 from contextlib import closing
-
 import ConfigParser
+from threading import Thread
 
+# 3rd party
+from flask import Flask, jsonify, request, Response, render_template, json, g
+
+# radiocrepe
 from radiocrepe.storage import Storage
 
-from flask import Flask, jsonify, request, Response, render_template, json, g
+
 app = Flask(__name__)
 
 
@@ -22,12 +24,12 @@ playing = None
 
 @app.route('/song/<uid>')
 def song(uid):
-    storage = Storage.get(app.config)
+    storage = Storage.bind(app.config)
     meta = storage.get('index_uid_meta', uid, None)
     if meta is None:
         return 'song not found', 404
     else:
-        f = open(meta['fpath'], 'rb')
+        f = storage.file(uid)
         return Response(f, direct_passthrough=True, mimetype=meta['mime'],
                         content_type=meta['mime'],
                         headers={'Content-Disposition': "attachment; filename=" + os.path.basename(meta['fpath'])})
@@ -134,7 +136,19 @@ def jump_next():
     queue.pop(0)
 
 
-def main(args):
+class StorageThread(Thread):
+    def __init__(self, config):
+        super(StorageThread, self).__init__()
+        self._config = config
+        self.daemon = True
+
+    def run(self):
+        storage = Storage.bind(self._config)
+        storage.initialize()
+        storage.update()
+
+
+def main(args, root_logger, handler):
     config = dict(host='localhost',
                   port=5000,
                   title='Radiocrepe',
@@ -148,6 +162,8 @@ def main(args):
             for k, v in config_ini.items(section):
                 if v:
                     config[k] = v
+        if config_ini.has_option('site', 'debug'):
+            config['debug'] = config_ini.getboolean('site', 'debug')
 
     for k, v in args.__dict__.iteritems():
         if v is not None:
@@ -155,8 +171,11 @@ def main(args):
 
     app.config.update(config)
 
-    storage = Storage.bind(config)
-    storage.initialize()
-    storage.update()
+    t = StorageThread(config)
+    t.start()
 
-    app.run(debug=True, host=config['host'], port=int(config['port']))
+    if not config['debug']:
+        app.logger.addHandler(handler)
+
+    app.run(debug=config['debug'],
+            host=config['host'], port=int(config['port']))
