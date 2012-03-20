@@ -5,6 +5,7 @@ import os
 from urllib import urlencode
 import json
 import logging
+import time
 
 # 3rd party
 import magic
@@ -30,6 +31,7 @@ class Storage(object):
     def __init__(self, config):
         self._conn = sqlite3.connect(os.path.join(
             config['content_dir'], 'songs.db'))
+        self._conn.row_factory = sqlite3.Row
         self._config = config
         self._logger = logging.getLogger('radiocrepe.storage')
 
@@ -56,16 +58,14 @@ class Storage(object):
         keys = {}
 
         for (k, v) in mdata.iteritems():
-            if isinstance(v, unicode):
-                v = v.encode('utf-8')
-            keys[k] = v if v else ''
+            keys[k] = v.encode('utf-8') if v else ''
 
-        uid = hashlib.sha1(urlencode(keys)).hexdigest()
+        uid = hashlib.sha1(urlencode(keys)).hexdigest().decode('utf-8')
 
-        self._logger.debug('Indexing %s (%s)' % (uid, os.path.basename(fpath)))
+        self._logger.debug(u'Indexing %s (%s)' % (uid, os.path.basename(fpath)))
 
         c = self._conn.cursor()
-        r = c.execute('SELECT * FROM index_uid_meta WHERE key = ?;', (uid,))
+        r = c.execute('SELECT * FROM song_index WHERE uid = ?;', (uid,))
 
         if (r.fetchone()):
             return
@@ -75,46 +75,33 @@ class Storage(object):
             'fpath': fpath
         })
 
-        self._index('index_uid_meta', uid, mdata, exact=True)
-        self._index('index_artist_uid', mdata['artist'], uid)
-        self._index('index_title_uid', mdata['title'], uid)
-        self._index('index_album_uid', mdata['album'], uid)
+        self._index(uid, mdata, int(time.time()))
 
-    def _index(self, index, key, data, exact=False):
+    def _index(self, uid, data, ts):
         c = self._conn.cursor()
-
-        if not exact:
-            key = self._make_key(key)
-
-        if isinstance(data, dict):
-            value = json.dumps(data)
-        else:
-            value = data
-
-        c.execute('INSERT INTO %s (key, data) VALUES (?, ?)' % index,
-                  (key, value))
+        c.execute('INSERT INTO song_index (uid, timestamp, fpath, mime, artist, title, album) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                  (uid, ts, data['fpath'], data['mime'], data['artist'], data['title'], data['album']))
         self._conn.commit()
 
-    def get(self, index, key, default=None, like=False):
+    def search(self, term):
         c = self._conn.cursor()
-        if like:
-            key = '%%%s%%' % self._make_key(key)
-            r = c.execute("SELECT data FROM %s WHERE key LIKE ?" % index, (key,))
-        else:
-            r = c.execute('SELECT data FROM %s WHERE key = ?' % index, (key,))
+        key = "%%%s%%" % term
+        r = c.execute("SELECT * FROM song_index WHERE artist LIKE ? OR title LIKE ?", (key, key))
+        return map(lambda r: dict(r), r.fetchall())
 
-        if like:
-            return map(lambda x: x[0], r.fetchall())
+    def get(self, uid, default=None):
+        c = self._conn.cursor()
+        r = c.execute('SELECT * FROM song_index WHERE uid = ?', (uid,))
+
+        res = r.fetchone()
+        if res:
+            return dict(res)
         else:
-            res = r.fetchone()
-            if res:
-                return json.loads(res[0])
-            else:
-                return default
+            return default
 
     def __contains__(self, uid):
         c = self._conn.cursor()
-        r = c.execute('SELECT data FROM index_uid_meta WHERE key = ?' % (uid,))
+        r = c.execute('SELECT data FROM song_index WHERE uid = ?' % (uid,))
         return not not r.fetchone()
 
     def update(self):
@@ -125,7 +112,8 @@ class Storage(object):
             for fname in filenames:
                 mime = magic.Magic(mime=True)
                 fpath = os.path.join(dirpath, fname)
-                mtype = mime.from_file(fpath)
+
+                mtype = mime.from_file(fpath.encode('utf-8'))
                 if mtype in allowed_mtypes:
                     meta = self._file_metadata(mtype, fpath)
                     if meta:
@@ -136,5 +124,5 @@ class Storage(object):
         self._logger.info('DB update finished')
 
     def file(self, uid):
-        meta = self.get('index_uid_meta', uid)
+        meta = self.get(uid)
         return open(os.path.join(self._config['content_dir'], meta['fpath']))

@@ -1,23 +1,10 @@
-CREATE TABLE index_uid_meta
+CREATE TABLE song_index
 (
-    key varchar(255),
-    data varchar(1024)
-);
-
-CREATE TABLE index_artist_uid
-(
-    key varchar(255),
-    data varchar(1024)
-);
-
-CREATE TABLE index_title_uid
-(
-    key varchar(255),
-    data varchar(1025)
-);
-
-CREATE TABLE index_album_uid
-(
-    key varchar(255),
-    data varchar(1024)
+    uid char(20),
+    timestamp integer,
+    fpath varchar(1024),
+    mime varchar(255),
+    artist varchar(255),
+    title varchar(255),
+    album varchar(255)
 );

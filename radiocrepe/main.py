@@ -7,14 +7,14 @@ import logging
 
 
 def main():
-
+    logging_level = logging.INFO
     root_logger = logging.getLogger()
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(
         '%(asctime)-15s %(message)s'))
-    handler.setLevel(logging.INFO)
+    handler.setLevel(logging_level)
     root_logger.addHandler(handler)
-    root_logger.setLevel(logging.INFO)
+    root_logger.setLevel(logging_level)
 
     parser = argparse.ArgumentParser(description='A simple office DJ')
 

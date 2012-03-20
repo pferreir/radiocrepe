@@ -25,7 +25,7 @@ playing = None
 @app.route('/song/<uid>')
 def song(uid):
     storage = Storage.bind(app.config)
-    meta = storage.get('index_uid_meta', uid, None)
+    meta = storage.get(uid, None)
     if meta is None:
         return 'song not found', 404
     else:
@@ -70,7 +70,7 @@ def _queue():
     storage = Storage.bind(app.config)
     res = []
     for ts, uid in queue:
-        elem = storage.get('index_uid_meta', uid, None)
+        elem = storage.get(uid, None)
         elem['uid'] = uid
         elem['time'] = ts
         res.append(elem)
@@ -81,7 +81,7 @@ def _queue():
 def _playing():
     if playing:
         storage = Storage.bind(app.config)
-        meta = storage.get('index_uid_meta', playing[1], None)
+        meta = storage.get(playing[1], None)
         meta['time'] = playing[0]
     else:
         meta = None
@@ -117,14 +117,12 @@ def _search(term):
 
     term = unquote(term)
 
-    res = set(storage.get('index_artist_uid', term, like=True))
-    res |= set(storage.get('index_title_uid', term, like=True))
+    res = storage.search(term)
 
     if res:
         ts = time.time()
-        uid = random.choice(list(res))
-        queue.append((ts, uid))
-        meta = storage.get('index_uid_meta', uid, None)
+        meta = random.choice(res)
+        queue.append((ts, meta['uid']))
         meta['time'] = ts
         return jsonify(meta)
     else:
@@ -161,7 +159,7 @@ def main(args, root_logger, handler):
         for section in config_ini.sections():
             for k, v in config_ini.items(section):
                 if v:
-                    config[k] = v
+                    config[k] = unicode(v)
         if config_ini.has_option('site', 'debug'):
             config['debug'] = config_ini.getboolean('site', 'debug')
 
