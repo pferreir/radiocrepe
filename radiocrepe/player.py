@@ -64,10 +64,7 @@ def callback_wrap(self, callback):
 class VLCPlayer(Player):
     def initialize(self):
         if self._config.mode == 'stream':
-            args = "--sout=#gather:transcode{{vcodec=none,acodec=mp3"
-            ",ab=128,channels=2,samplerate=44100}}"
-            ":rtp{{sdp=rtsp://{host}:5544/}} --no-sout-rtp-sap --rtsp-host={host}"
-            " --no-sout-standard-sap --ttl=1 --sout-keep".format(**self._config)
+            args = "--sout=#gather:transcode{{vcodec=none,acodec=mp4a,ab=128,channels=2,samplerate=44100}}:rtp{{sdp=rtsp://{host}:5544/}} --no-sout-rtp-sap --rtsp-host={host} --no-sout-standard-sap --ttl=1 --sout-keep".format(**self._config.__dict__)
         else:
             args = ""
 

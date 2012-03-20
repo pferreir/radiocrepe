@@ -118,6 +118,7 @@ class Storage(object):
         return not not r.fetchone()
 
     def update(self):
+	allowed_mtypes = self._config.get('allowed_mime_types').split(',') or MIME_TYPES.keys()
         self._logger.info('Updating DB')
         cdir = self._config['content_dir']
         for dirpath, dirnames, filenames in os.walk(cdir):
@@ -125,7 +126,7 @@ class Storage(object):
                 mime = magic.Magic(mime=True)
                 fpath = os.path.join(dirpath, fname)
                 mtype = mime.from_file(fpath)
-                if mtype in MIME_TYPES:
+                if mtype in allowed_mtypes:
                     meta = self._file_metadata(mtype, fpath)
                     if meta:
                         meta['mime'] = mtype
