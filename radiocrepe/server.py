@@ -94,11 +94,11 @@ def artist_info(name):
     if app.config.get('lastfm_key'):
         params = {
             'method': 'artist.getinfo',
-            'artist': name,
+            'artist': name.encode('utf-8'),
             'format': 'json',
             'api_key': app.config['lastfm_key']
         }
-        url = "http://ws.audioscrobbler.com/2.0/?" + urlencode(params)
+        url = u"http://ws.audioscrobbler.com/2.0/?" + urlencode(params)
         with closing(urlopen(url)) as d:
             return Response(d.read(), mimetype='application/json')
     else:
