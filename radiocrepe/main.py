@@ -1,8 +1,6 @@
 import argparse
-from radiocrepe import server
-from radiocrepe import player
+from radiocrepe import server, player, node
 
-import ConfigParser
 import logging
 
 
@@ -37,9 +35,17 @@ def main():
     player_parser.add_argument('--mode', default='local')
     player_parser.add_argument('--host', default='localhost')
 
+    node_parser = subparsers.add_parser('node', help='start a player')
+    node_parser.set_defaults(action='node')
+    node_parser.add_argument('-c')
+    node_parser.add_argument('--port')
+    node_parser.add_argument('--host')
+
     args = parser.parse_args()
 
     if args.action == 'server':
         server.main(args, root_logger, handler)
+    elif args.action == 'node':
+        node.main(args, root_logger, handler)
     else:
         player.main(args)

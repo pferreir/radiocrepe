@@ -18,7 +18,7 @@ class HTTPClient(object):
 
     def enqueue(self, uid):
         try:
-            with closing(urlopen(self._surl + '/enqueue',
+            with closing(urlopen(self._surl + '/enqueue/',
                                  urlencode({'uid': uid}))) as d:
                 data = json.load(d)
             return True
@@ -27,7 +27,7 @@ class HTTPClient(object):
 
     def notify_start(self):
         try:
-            with closing(urlopen(self._surl + '/notify/start', '')) as d:
+            with closing(urlopen(self._surl + '/notify/start/', '')) as d:
                 data = json.load(d)
                 success = d.code == 200
             return data
@@ -36,17 +36,17 @@ class HTTPClient(object):
 
     def notify_stop(self):
         try:
-            with closing(urlopen(self._surl + '/notify/stop', '')) as d:
+            with closing(urlopen(self._surl + '/notify/stop/', '')) as d:
                 success = d.code == 200
             return True
         except HTTPError:
             return False
 
     def get_queue(self):
-        return json.load(urlopen(self._surl + '/queue'))
+        return json.load(urlopen(self._surl + '/queue/'))
 
     def get_stream(self, uid):
-        return urlopen(self._surl + '/song/' + uid)
+        return urlopen(self._surl + '/song/' + uid + '/')
 
     def get_stream_next(self):
         nxt = self.ask_next()

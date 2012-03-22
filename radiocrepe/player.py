@@ -82,9 +82,8 @@ class VLCPlayer(Player):
                              callback_wrap(self, self._stopped))
 
     def _enqueue(self, meta):
-        self._client.download(meta)
-        self._list.add_media('file://' + os.path.join(
-            os.getcwd(), self._content_dir, meta['uid'] + '.sng'))
+        url = "http://{0}/song/{1}/".format(self._config.server, meta['uid'])
+        self._list.add_media(url)
 
     def _nextItem(self, player, event):
         self.on_song_start()

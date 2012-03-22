@@ -3,7 +3,7 @@ $(function() {
     var prev_result = {time: 0};
 
     function search() {
-        $.ajax({url: '/play/' + encodeURI($('#term').val()),
+        $.ajax({url: '/play/' + encodeURI($('#term').val()) + '/',
                 type: 'POST',
                 success: function(result) {
                     collection.add(result);
@@ -20,7 +20,7 @@ $(function() {
   
     var Queue = Backbone.Collection.extend({
         model: Item,
-        url: "/queue"
+        url: "/queue/"
     });
 
     var ItemView = Backbone.View.extend({
@@ -83,7 +83,7 @@ $(function() {
 
     function update_artist_info(artist) {
         if (artist) {
-            $.ajax({url: '/artist/' + encodeURI(artist),
+            $.ajax({url: '/artist/' + encodeURI(artist) + '/',
                    success: function(result) {
                        $('#picture').hide();
                        if (result.artist) {
@@ -94,7 +94,7 @@ $(function() {
     }
 
     function poll_playing() {
-        $.ajax({url: '/playing',
+        $.ajax({url: '/playing/',
                 type: 'GET',
                 success: function(result) {
                     if (result) {

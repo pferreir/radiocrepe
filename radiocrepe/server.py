@@ -5,15 +5,13 @@ from urllib2 import urlopen
 import random
 import time
 from contextlib import closing
-import ConfigParser
-from threading import Thread
 
 # 3rd party
-from flask import Flask, jsonify, request, Response, render_template, json, g
+from flask import Flask, jsonify, request, Response, render_template, json, g, redirect
 
 # radiocrepe
-from radiocrepe.storage import Storage
-
+from radiocrepe.storage import DistributedStorage
+from radiocrepe.util import load_config
 
 app = Flask(__name__)
 
@@ -22,22 +20,39 @@ queue = []
 playing = None
 
 
-@app.route('/song/<uid>')
+@app.route('/song/<uid>/')
 def song(uid):
-    storage = Storage.bind(app.config)
+    """
+    retrieve the song from one of the storage nodes
+    """
+    storage = DistributedStorage.bind(app.config)
     meta = storage.get(uid, None)
     if meta is None:
         return 'song not found', 404
     else:
-        f = storage.file(uid)
-        return Response(f, direct_passthrough=True, mimetype=meta['mime'],
-                        content_type=meta['mime'],
-                        headers={'Content-Disposition': "attachment; filename=" + os.path.basename(meta['fpath'])})
+        address = storage.get_node_address(meta['node_id'])
+        return redirect('http://{0}/song/{1}/'.format(address, meta['uid']))
 
 
-@app.route('/enqueue', methods=['POST'])
+@app.route('/node/upload/', methods=['POST'])
+def node_recv():
+    """
+    Receive metadata from the nodes
+    """
+    storage = DistributedStorage.bind(app.config)
+    node = request.form.get('node_id')
+    data = request.form.get('songs')
+    server = request.form.get('server')
+
+    if not storage.get_node(node):
+        storage.attach(node, server)
+    storage.update_node(node, json.loads(data))
+    return ''
+
+
+@app.route('/enqueue/', methods=['POST'])
 def enqueue():
-    uid = request.form['uid']
+    uid = request.form.get('uid')
     if uid in storage:
         queue.append((time.time(), uid))
         return jsonify({'id': uid})
@@ -47,7 +62,7 @@ def enqueue():
         return jsonify(), 404
 
 
-@app.route('/notify/start', methods=['POST'])
+@app.route('/notify/start/', methods=['POST'])
 def _notify_start():
     global playing
     try:
@@ -58,16 +73,16 @@ def _notify_start():
                         mimetype='application/json', status=404)
 
 
-@app.route('/notify/stop', methods=['POST'])
+@app.route('/notify/stop/', methods=['POST'])
 def _notify_stop():
     global playing
     playing = None
     return ''
 
 
-@app.route('/queue')
+@app.route('/queue/')
 def _queue():
-    storage = Storage.bind(app.config)
+    storage = DistributedStorage.bind(app.config)
     res = []
     for ts, uid in queue:
         elem = storage.get(uid, None)
@@ -77,10 +92,10 @@ def _queue():
     return json.dumps(res)
 
 
-@app.route('/playing')
+@app.route('/playing/')
 def _playing():
     if playing:
-        storage = Storage.bind(app.config)
+        storage = DistributedStorage.bind(app.config)
         meta = storage.get(playing[1], None)
         meta['time'] = playing[0]
     else:
@@ -89,7 +104,7 @@ def _playing():
                     mimetype='application/json')
 
 
-@app.route('/artist/<name>')
+@app.route('/artist/<name>/')
 def artist_info(name):
     if app.config.get('lastfm_key'):
         params = {
@@ -111,10 +126,9 @@ def index():
     return render_template('queue.html', title=app.config['title'])
 
 
-@app.route('/play/<term>', methods=['POST'])
+@app.route('/play/<term>/', methods=['POST'])
 def _search(term):
-    storage = Storage.bind(app.config)
-
+    storage = DistributedStorage.bind(app.config)
     term = unquote(term)
 
     res = storage.search(term)
@@ -134,43 +148,13 @@ def jump_next():
     queue.pop(0)
 
 
-class StorageThread(Thread):
-    def __init__(self, config):
-        super(StorageThread, self).__init__()
-        self._config = config
-        self.daemon = True
-
-    def run(self):
-        storage = Storage.bind(self._config)
-        storage.initialize()
-        storage.update()
-
-
 def main(args, root_logger, handler):
-    config = dict(host='localhost',
-                  port=5000,
-                  title='Radiocrepe',
-                  content_dir='.')
+    config = load_config(args)
 
-    if args.c:
-        config_ini = ConfigParser.ConfigParser()
-        config_ini.read(args.c)
-
-        for section in config_ini.sections():
-            for k, v in config_ini.items(section):
-                if v:
-                    config[k] = unicode(v)
-        if config_ini.has_option('site', 'debug'):
-            config['debug'] = config_ini.getboolean('site', 'debug')
-
-    for k, v in args.__dict__.iteritems():
-        if v is not None:
-            config[k] = v
+    storage = DistributedStorage.bind(config)
+    storage.initialize()
 
     app.config.update(config)
-
-    t = StorageThread(config)
-    t.start()
 
     if not config['debug']:
         app.logger.addHandler(handler)
