@@ -17,7 +17,8 @@ setup(
     package_data={
         'radiocrepe': ['*.sql']
     },
-    install_requires=['mutagen', 'Flask', 'python-magic', 'sqlalchemy'],
+    install_requires=['mutagen', 'Flask', 'python-magic', 'sqlalchemy',
+                      'gevent', 'gevent-websocket'],
     entry_points={'console_scripts': "radiocrepe=radiocrepe.main:main"},
     dependency_links=[],
     zip_safe=False)

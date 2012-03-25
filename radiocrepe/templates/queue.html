@@ -20,6 +20,10 @@
   {% endraw %}
   </script>
 
+  <script type="text/javascript">
+    var url = "{{url_for('index', _external=True)}}";
+  </script>
+
 </head>
 <body>
   <h1>{{title}}</h1>

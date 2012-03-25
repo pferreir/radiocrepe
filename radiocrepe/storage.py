@@ -14,7 +14,7 @@ import pkg_resources
 
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 
-from sqlalchemy import Column, Integer, String, create_engine, or_
+from sqlalchemy import Column, Integer, String, create_engine, or_, Boolean
 from sqlalchemy.orm import sessionmaker
 
 # radiocrepe
@@ -60,6 +60,7 @@ class Song(SongMixin, Base):
 class RemoteSong(SongMixin, Base):
     __tablename__ = 'song_index'
     node_id = Column(String, primary_key=True)
+    #available = Column(Boolean, server_default=True)
 
     def __unicode__(self):
         return u"<RemoteSong:{0} @ {1}>".format(self.uid, self.node_id)
@@ -212,11 +213,23 @@ class DistributedStorage(Storage):
         RemoteSong.metadata.create_all(self._engine)
         Node.metadata.create_all(self._engine)
 
-    def attach(self, node, server):
+    def attach(self, node_id, server):
         """
         Attach remote storage
         """
-        self._session.add(Node(node_id=node, address=server))
+        self._session.add(Node(node_id=node_id, address=server))
+        self._session.query(Song).filter_by(node_id=node_id).update({
+            available: True
+        })
+
+    def detach(self, node_id):
+        """
+        Attach remote storage
+        """
+        self._session.query(Node).filter_by(node_id=node_id).delete()
+        self._session.query(Song).filter_by(node_id=node_id).update({
+            available: False
+        })
 
     def file(self, uid):
         c = self._conn.cursor()

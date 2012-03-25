@@ -5,8 +5,12 @@ from urllib2 import urlopen
 import random
 import time
 from contextlib import closing
+from Queue import Queue, Empty
 
 # 3rd party
+from geventwebsocket.handler import WebSocketHandler
+from gevent.pywsgi import WSGIServer
+from gevent import sleep
 from flask import Flask, jsonify, request, Response, render_template, json, g, redirect
 
 # radiocrepe
@@ -18,6 +22,23 @@ app = Flask(__name__)
 
 queue = []
 playing = None
+messages = {}
+
+
+def broadcast(mtype, time, uid):
+    global messages
+    for queue in messages.itervalues():
+        queue.put((mtype, time, uid))
+
+
+def message(msg):
+    mtype, ts, uid = msg
+
+    storage = DistributedStorage.bind(app.config)
+    meta = storage.get(uid, None)
+
+    if mtype == 'add':
+        return json.dumps({'op': 'add', 'ts': ts, 'data': meta})
 
 
 @app.route('/song/<uid>/')
@@ -50,11 +71,22 @@ def node_recv():
     return ''
 
 
+@app.route('/node/detach/', methods=['POST'])
+def node_recv():
+    """
+    Receive metadata from the nodes
+    """
+    storage = DistributedStorage.bind(app.config)
+    storage.detach(request.form.get('node_id'))
+
+
 @app.route('/enqueue/', methods=['POST'])
 def enqueue():
     uid = request.form.get('uid')
     if uid in storage:
-        queue.append((time.time(), uid))
+        ts = time.time()
+        queue.append((ts, uid))
+        broadcast('add', ts, uid)
         return jsonify({'id': uid})
     else:
         return Response(jsonify(result='ERR_NO_SUCH_SONG', id=uid).data,
@@ -67,6 +99,7 @@ def _notify_start():
     global playing
     try:
         playing = queue.pop(0)
+        broadcast('play', playing[0], playing[1])
         return json.dumps(len(queue))
     except IndexError:
         return Response(jsonify(result='ERR_NO_NEXT').data,
@@ -76,6 +109,7 @@ def _notify_start():
 @app.route('/notify/stop/', methods=['POST'])
 def _notify_stop():
     global playing
+    broadcast('stop', playing[0], playing[1])
     playing = None
     return ''
 
@@ -90,6 +124,29 @@ def _queue():
         elem['time'] = ts
         res.append(elem)
     return json.dumps(res)
+
+
+@app.route('/updates/')
+def updates():
+    global messages
+
+    if request.environ.get('wsgi.websocket'):
+        ws = request.environ['wsgi.websocket']
+        queue = Queue()
+        messages[id(request)] = queue
+        try:
+            while True:
+                # receive stuff here
+                try:
+                    while True:
+                        msg = message(queue.get_nowait())
+                        ws.send(msg)
+                except Empty:
+                    sleep(1)
+        finally:
+            del messages[id(request)]
+        return ''
+    return 'I can haz websockets?'
 
 
 @app.route('/playing/')
@@ -137,6 +194,7 @@ def _search(term):
         ts = time.time()
         meta = random.choice(res)
         queue.append((ts, meta['uid']))
+        broadcast('add', ts, meta['uid'])
         meta['time'] = ts
         return jsonify(meta)
     else:
@@ -149,6 +207,7 @@ def jump_next():
 
 
 def main(args, root_logger, handler):
+    global messages
     config = load_config(args)
 
     storage = DistributedStorage.bind(config)
@@ -159,5 +218,8 @@ def main(args, root_logger, handler):
     if not config['debug']:
         app.logger.addHandler(handler)
 
-    app.run(debug=config['debug'],
-            host=config['host'], port=int(config['port']))
+    http_server = WSGIServer((config['host'], int(config['port'])),
+                              app, handler_class=WebSocketHandler)
+    http_server.serve_forever()
+    #app.run(debug=config['debug'],
+    #        host=config['host'], port=int(config['port']))

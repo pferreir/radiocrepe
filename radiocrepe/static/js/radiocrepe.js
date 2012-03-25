@@ -2,22 +2,9 @@ $(function() {
     var song_template = Handlebars.compile($("#song_template").html());
     var prev_result = {time: 0};
 
-    function search() {
-        $.ajax({url: '/play/' + encodeURI($('#term').val()) + '/',
-                type: 'POST',
-                success: function(result) {
-                    collection.add(result);
-                    $('#term').val('').focus();
-                },
-               error: function() {
-                   alert('Sorry, nothing found');
-                   $('#term').focus()
-                }})
-    }
-
     var Item = Backbone.Model.extend({
     });
-  
+
     var Queue = Backbone.Collection.extend({
         model: Item,
         url: "/queue/"
@@ -73,13 +60,6 @@ $(function() {
     var view = new QueueView({
         collection: collection
     });
-    
-    $('#play').click(search);
-    $('#term').keypress(function(e){
-        if(e.which == 13){
-            search();
-        }
-    });
 
     function update_artist_info(artist) {
         if (artist) {
@@ -93,31 +73,70 @@ $(function() {
         }
     }
 
-    function poll_playing() {
-        $.ajax({url: '/playing/',
-                type: 'GET',
-                success: function(result) {
-                    if (result) {
-                        if (result.time != prev_result.time) {
-                            prev_result = result;
-                            $("#now").html(song_template(result))
-                            _(collection.models).each(function(item){
-                                if (item.get('time') <= result.time) {
-                                    collection.remove(item);
-                                }
-                            }, this);
-                            update_artist_info(result.artist);
-                        }
-                    } else {
-                        $("#now").text("Nothing")
-                        $("#picture").hide();
-                    }
-                },
-                error: function() {
-                    $("#now").text("Can't get data")
-                }});
-    }
+    var App = {
+        initialize: function() {
+            var ws = new WebSocket(url.replace('http', 'ws') + "updates/");
 
-    poll_playing();
-    setInterval(poll_playing, 5000);
+            $('#play').click(function() {
+                App.search($('#term').val());
+            });
+            $('#term').keypress(function(e){
+                if(e.which == 13){
+                    App.search($('#term').val());
+                }
+            });
+
+            ws.onopen = function() {
+                console.debug('websocket connection established');
+            };
+
+            ws.onmessage = function(msg) {
+                result = JSON.parse(msg.data);
+                if (result) {
+                    if (result.op == 'add') {
+                        App.add(result['data']);
+                    } else if (result.op == 'play') {
+                        App.play(result['data']);
+                    } else if (result.op == 'stop') {
+                        App.stop();
+                    }
+                }
+            };
+        },
+        play: function (song) {
+            console.debug('playing', song);
+            $("#now").html(song_template(song))
+            _(collection.models).each(function(item){
+                if (item.get('time') <= song.time) {
+                    collection.remove(item);
+                }
+            }, this);
+            update_artist_info(song.artist);
+        },
+
+        stop: function() {
+            $("#now").text("Nothing")
+            $("#picture").hide();
+        },
+
+        add: function(song) {
+            console.debug('adding', song);
+            collection.add(song);
+        },
+
+        search: function(term) {
+            $.ajax({url: '/play/' + encodeURI(term) + '/',
+                    type: 'POST',
+                    success: function(result) {
+                        $('#term').val('').focus();
+                    },
+                    error: function() {
+                        alert('Sorry, nothing found');
+                        $('#term').focus()
+                    }});
+        }
+
+    };
+
+    App.initialize();
 });
