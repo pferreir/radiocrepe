@@ -7,6 +7,7 @@ from urllib import  urlencode
 from contextlib import closing
 import uuid
 import os
+import atexit
 
 # 3rd party
 from flask import Flask, json, Response
@@ -72,14 +73,29 @@ class StorageThread(Thread):
         storage.last_sent = int(time.time())
 
 
+def attach_to_server(config):
+    urlopen("http://%s/node/attach/" % config['server'],
+            urlencode({'node_id': config['node_id'],
+                       'address': "{host}:{port}".format(**config)}))
+
+
+def detach_from_server(config):
+    urlopen("http://%s/node/detach/" % config['server'],
+            urlencode({'node_id': config['node_id']}))
+
+
 def main(args, logger, handler):
     config = load_config(args)
 
     if 'node_id' not in config:
-        config['node_id'] = uuid.uuid4()
+        print "No 'node_id' set. Please add one in your config file."
+        return
 
     app.config.update(config)
     app.logger.addHandler(handler)
+
+    attach_to_server(app.config)
+    atexit.register(detach_from_server, config)
 
     t = StorageThread(config, logger)
     t.start()

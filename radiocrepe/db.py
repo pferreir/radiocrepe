@@ -55,6 +55,7 @@ class NodeEntry(Base):
     __tablename__ = 'nodes'
     node_id = Column(String, primary_key=True)
     address = Column(String)
+    active = Column(Boolean, default=True)
 
 
 class HubEntry(Base):

@@ -27,14 +27,27 @@ class NodeRegistry(object):
         """
         Attach remote storage
         """
-        self._session.add(NodeEntry(node_id=node_id, address=server))
+        self._logger.info('Attaching %s' % node_id)
+        if node_id in self:
+            self.set_node_active(node_id, True)
+        else:
+            self._session.add(NodeEntry(node_id=node_id, address=server))
+            self._session.commit()
         self._storage.mark_available(node_id)
 
     def detach(self, node_id):
         """
         Detach remote storage
         """
-        self._session.query(NodeEntry).filter_by(node_id=node_id).delete()
+        self._logger.info('Detaching %s' % node_id)
+        self.set_node_active(node_id, False)
+        self._storage.mark_unavailable(node_id)
+
+    def set_node_active(self, node_id, status):
+        self._session.query(NodeEntry).filter_by(node_id=node_id).update({
+            NodeEntry.active: status
+        })
+        self._session.commit()
 
     def __getitem__(self, node_id):
         try:
@@ -58,6 +71,15 @@ class NodeRegistry(object):
     def get_address(self, node_id):
         return self._session.query(NodeEntry.address).\
           filter_by(node_id=node_id).first()[0]
+
+    def __iter__(self):
+        for node in self._session.query(NodeEntry):
+            yield node
+
+    def detach_all(self):
+        for node in self:
+            if node.active:
+                self.detach(node.node_id)
 
 
 class HubRegistry(object):

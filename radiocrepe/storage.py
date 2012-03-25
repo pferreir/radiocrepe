@@ -67,7 +67,8 @@ class Storage(object):
         key = "%%%s%%" % term
         return list(r.dict() for r in self._session.query(
             self._songClass).filter(or_(self._songClass.artist.like(key),
-                                        self._songClass.title.like(key))))
+                                        self._songClass.title.like(key)),
+                                    self._songClass.available == True))
 
     def get(self, uid, default=None):
         first = self._session.query(self._songClass).filter_by(uid=uid).first()
@@ -161,6 +162,7 @@ class DistributedStorage(Storage):
 
     def initialize(self):
         RemoteSong.metadata.create_all(self._engine)
+        self.node_registry.detach_all()
 
     def mark_available(self, node_id):
         """
@@ -169,6 +171,7 @@ class DistributedStorage(Storage):
         self._session.query(self._songClass).filter_by(node_id=node_id).update({
             self._songClass.available: True
         })
+        self._session.commit()
 
     def mark_unavailable(self, node_id):
         """
@@ -177,6 +180,7 @@ class DistributedStorage(Storage):
         self._session.query(self._songClass).filter_by(node_id=node_id).update({
             self._songClass.available: False
         })
+        self._session.commit()
 
     def file(self, uid):
         r = self._node_registry.get(uid)

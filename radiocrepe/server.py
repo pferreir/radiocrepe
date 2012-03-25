@@ -78,6 +78,17 @@ def node_detach():
     """
     registry = DistributedStorage.bind(app.config).node_registry
     registry.detach(request.form.get('node_id'))
+    return ''
+
+
+@app.route('/node/attach/', methods=['POST'])
+def node_attach():
+    """
+    Detach from a node
+    """
+    registry = DistributedStorage.bind(app.config).node_registry
+    registry.attach(request.form.get('node_id'), request.form.get('address'))
+    return ''
 
 
 @app.route('/enqueue/', methods=['POST'])
@@ -224,5 +235,3 @@ def main(args, root_logger, handler):
     http_server = WSGIServer((config['host'], int(config['port'])),
                               app, handler_class=WebSocketHandler)
     http_server.serve_forever()
-    #app.run(debug=config['debug'],
-    #        host=config['host'], port=int(config['port']))
