@@ -10,7 +10,7 @@ from Queue import Queue, Empty
 # 3rd party
 from geventwebsocket.handler import WebSocketHandler
 from gevent.pywsgi import WSGIServer
-from gevent import sleep
+from gevent import sleep, greenlet
 from flask import Flask, jsonify, request, Response, render_template, json, g, redirect
 
 # radiocrepe
@@ -129,11 +129,12 @@ def _queue():
 @app.route('/updates/')
 def updates():
     global messages
+    guid = id(greenlet.getcurrent())
 
     if request.environ.get('wsgi.websocket'):
         ws = request.environ['wsgi.websocket']
         queue = Queue()
-        messages[id(request)] = queue
+        messages[guid] = queue
         try:
             while True:
                 # receive stuff here
@@ -144,7 +145,7 @@ def updates():
                 except Empty:
                     sleep(1)
         finally:
-            del messages[id(request)]
+            del messages[guid]
         return ''
     return 'I can haz websockets?'
 
