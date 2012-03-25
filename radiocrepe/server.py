@@ -37,8 +37,7 @@ def message(msg):
     storage = DistributedStorage.bind(app.config)
     meta = storage.get(uid, None)
 
-    if mtype == 'add':
-        return json.dumps({'op': 'add', 'ts': ts, 'data': meta})
+    return json.dumps({'op': mtype, 'time_add': ts, 'data': meta})
 
 
 @app.route('/song/<uid>/')
@@ -51,7 +50,7 @@ def song(uid):
     if meta is None:
         return 'song not found', 404
     else:
-        address = storage.get_node_address(meta['node_id'])
+        address = storage.node_registry.get_address(meta['node_id'])
         return redirect('http://{0}/song/{1}/'.format(address, meta['uid']))
 
 
@@ -61,23 +60,24 @@ def node_recv():
     Receive metadata from the nodes
     """
     storage = DistributedStorage.bind(app.config)
+    registry = storage.node_registry
     node = request.form.get('node_id')
     data = request.form.get('songs')
     server = request.form.get('server')
 
-    if not storage.get_node(node):
-        storage.attach(node, server)
+    if not registry.get(node):
+        registry.attach(node, server)
     storage.update_node(node, json.loads(data))
     return ''
 
 
 @app.route('/node/detach/', methods=['POST'])
-def node_recv():
+def node_detach():
     """
-    Receive metadata from the nodes
+    Detach from a node
     """
-    storage = DistributedStorage.bind(app.config)
-    storage.detach(request.form.get('node_id'))
+    registry = DistributedStorage.bind(app.config).node_registry
+    registry.detach(request.form.get('node_id'))
 
 
 @app.route('/enqueue/', methods=['POST'])
@@ -121,7 +121,7 @@ def _queue():
     for ts, uid in queue:
         elem = storage.get(uid, None)
         elem['uid'] = uid
-        elem['time'] = ts
+        elem['time_add'] = ts
         res.append(elem)
     return json.dumps(res)
 
@@ -154,7 +154,7 @@ def _playing():
     if playing:
         storage = DistributedStorage.bind(app.config)
         meta = storage.get(playing[1], None)
-        meta['time'] = playing[0]
+        meta['time_add'] = playing[0]
     else:
         meta = None
     return Response(json.dumps(meta),
@@ -217,6 +217,8 @@ def main(args, root_logger, handler):
 
     if not config['debug']:
         app.logger.addHandler(handler)
+    else:
+        app.debug = True
 
     http_server = WSGIServer((config['host'], int(config['port'])),
                               app, handler_class=WebSocketHandler)

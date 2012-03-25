@@ -12,7 +12,7 @@ import os
 from flask import Flask, json, Response
 
 # radiocrepe
-from radiocrepe.storage import Storage
+from radiocrepe.storage import NodeStorage
 from radiocrepe.util import load_config
 
 
@@ -21,7 +21,7 @@ app = Flask(__name__)
 
 @app.route('/song/<uid>/')
 def song(uid):
-    storage = Storage.bind(app.config)
+    storage = NodeStorage.bind(app.config)
     meta = storage.get(uid, None)
     if meta is None:
         return 'song not found', 404
@@ -56,7 +56,7 @@ class StorageThread(Thread):
             return False
 
     def run(self):
-        storage = Storage.bind(self._config)
+        storage = NodeStorage.bind(self._config)
         storage.initialize()
         storage.update()
 

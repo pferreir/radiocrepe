@@ -1,85 +1,24 @@
 # stdlib
-from collections import defaultdict
 import hashlib
 import os
 from urllib import urlencode
-import json
 import logging
 import time
 
 # 3rd party
 import magic
-import sqlite3
-import pkg_resources
-
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
-
-from sqlalchemy import Column, Integer, String, create_engine, or_, Boolean
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, or_
 
 # radiocrepe
 from radiocrepe.metadata import MIME_TYPES
-
+from radiocrepe.db import Song, RemoteSong, Info
+from radiocrepe.network import NodeRegistry, HubRegistry
 
 Session = sessionmaker()
-Base = declarative_base()
-
-
-class SongMixin(object):
-
-    @declared_attr
-    def __tablename__(cls):
-        return cls.__name__.lower()
-
-    uid = Column(String, primary_key=True)
-    timestamp = Column(Integer)
-    mime = Column(String)
-    artist = Column(String)
-    title = Column(String)
-    album = Column(String)
-
-    __mapper_args__= {'always_refresh': True}
-
-    def dict(row):
-        d = {}
-        for columnName in row.__table__.columns.keys():
-            d[columnName] = getattr(row, columnName)
-
-        return d
-
-
-class Song(SongMixin, Base):
-    __tablename__ = 'songs'
-
-    fpath = Column(String)
-
-    def __unicode__(self):
-        return u"<Song:{0} @ {1}>".format(self.uid, self.fpath)
-
-
-class RemoteSong(SongMixin, Base):
-    __tablename__ = 'song_index'
-    node_id = Column(String, primary_key=True)
-    #available = Column(Boolean, server_default=True)
-
-    def __unicode__(self):
-        return u"<RemoteSong:{0} @ {1}>".format(self.uid, self.node_id)
-
-
-class Info(Base):
-    __tablename__ = 'info'
-    last_sent = Column(Integer, primary_key=True)
-
-
-class Node(Base):
-    __tablename__ = 'nodes'
-    node_id = Column(String, primary_key=True)
-    address = Column(String, primary_key=True)
 
 
 class Storage(object):
-
-    _songClass = Song
 
     @classmethod
     def bind(cls, config):
@@ -137,34 +76,15 @@ class Storage(object):
     def __contains__(self, uid):
         return self.get(uid) != None
 
-    def update(self):
-        mtypes = self._config.get('allowed_mime_types', '')
-        if mtypes:
-            allowed_mtypes = mtypes.split(',')
-        else:
-            allowed_mtypes = MIME_TYPES.keys()
-
-        self._logger.info('Updating DB')
-        cdir = self._config['content_dir']
-        for dirpath, dirnames, filenames in os.walk(cdir):
-            for fname in filenames:
-                mime = magic.Magic(mime=True)
-                fpath = os.path.join(dirpath, fname)
-                mtype = mime.from_file(fpath.encode('utf-8'))
-                if mtype in allowed_mtypes:
-                    meta = self._file_metadata(mtype, fpath)
-                    if meta:
-                        meta.update({
-                            'mime': mtype,
-                            'fpath': os.path.relpath(fpath, cdir),
-                            'uid': self._hash(meta)
-                            })
-                        self._index(**meta)
-        self._logger.info('DB update finished')
-
     def file(self, uid):
-        meta = self.get(uid)
-        return open(os.path.join(self._config['content_dir'], meta['fpath']))
+        """
+        Overload: retrieve file by UID
+        """
+
+
+class NodeStorage(Storage):
+
+    _songClass = Song
 
     @property
     def last_sent(self):
@@ -196,6 +116,35 @@ class Storage(object):
             del song['fpath']
             yield song
 
+    def file(self, uid):
+        meta = self.get(uid)
+        return open(os.path.join(self._config['content_dir'], meta['fpath']))
+
+    def update(self):
+        mtypes = self._config.get('allowed_mime_types', '')
+        if mtypes:
+            allowed_mtypes = mtypes.split(',')
+        else:
+            allowed_mtypes = MIME_TYPES.keys()
+
+        self._logger.info('Updating DB')
+        cdir = self._config['content_dir']
+        for dirpath, dirnames, filenames in os.walk(cdir):
+            for fname in filenames:
+                mime = magic.Magic(mime=True)
+                fpath = os.path.join(dirpath, fname)
+                mtype = mime.from_file(fpath.encode('utf-8'))
+                if mtype in allowed_mtypes:
+                    meta = self._file_metadata(mtype, fpath)
+                    if meta:
+                        meta.update({
+                            'mime': mtype,
+                            'fpath': os.path.relpath(fpath, cdir),
+                            'uid': self._hash(meta)
+                            })
+                        self._index(**meta)
+        self._logger.info('DB update finished')
+
 
 class DistributedStorage(Storage):
 
@@ -208,46 +157,34 @@ class DistributedStorage(Storage):
         self._session = Session()
         self._config = config
         self._logger = logging.getLogger('radiocrepe.dist_storage')
+        self.node_registry = NodeRegistry(self)
 
     def initialize(self):
         RemoteSong.metadata.create_all(self._engine)
-        Node.metadata.create_all(self._engine)
 
-    def attach(self, node_id, server):
+    def mark_available(self, node_id):
         """
-        Attach remote storage
+        Mark all songs stored in this node as available
         """
-        self._session.add(Node(node_id=node_id, address=server))
-        self._session.query(Song).filter_by(node_id=node_id).update({
-            available: True
+        self._session.query(self._songClass).filter_by(node_id=node_id).update({
+            self._songClass.available: True
         })
 
-    def detach(self, node_id):
+    def mark_unavailable(self, node_id):
         """
-        Attach remote storage
+        Mark all songs in this node as unavailable
         """
-        self._session.query(Node).filter_by(node_id=node_id).delete()
-        self._session.query(Song).filter_by(node_id=node_id).update({
-            available: False
+        self._session.query(self._songClass).filter_by(node_id=node_id).update({
+            self._songClass.available: False
         })
 
     def file(self, uid):
-        c = self._conn.cursor()
-        res = c.execute('SELECT * FROM song_index, storage_index WHERE uid = ? AND node = node;',
-                  uid)
-        r = res.fetchone()
+        r = self._node_registry.get(uid)
         if r:
             return urlopen('http://%s/song/%s' % (r.server, r.uid))
         else:
             return None
 
-    def get_node(self, node_id):
-        return self._session.query(Node).filter_by(node_id=node_id).first()
-
     def update_node(self, node_id, data):
         for song in data:
             self._index(node_id=node_id, **song)
-
-    def get_node_address(self, node_id):
-        return self._session.query(Node.address).filter_by(node_id=node_id).first()[0]
-

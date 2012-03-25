@@ -56,68 +56,11 @@ class HTTPClient(object):
             return None
 
 
-class Content(object):
-    def __init__(self, content_dir):
-        self._content_dir = content_dir
-        self._songs = {}
-        self._sync()
-
-    def _read_hdr(self, fname):
-        with open(fname, 'rb') as f:
-            return json.load(f)
-
-    def _sync(self):
-        for f in glob(os.path.join(self._content_dir, '*.sng')):
-            f = re.split(r'\.|/', f)[-2]
-            self._songs[f] = self._read_hdr(os.path.join(
-                self._content_dir, f + '.hdr'))
-
-    def add(self, uid, meta):
-        self._songs[uid] = meta
-
-    def _save_hdr(self, uid):
-        with open(os.path.join(self._content_dir, uid + '.hdr'), 'wb') as f:
-            json.dump(self._songs[uid], f)
-
-    def __contains__(self, uid):
-        return uid in self._songs
-
-    def store(self, uid, meta, stream):
-        with open(os.path.join(self._content_dir, uid + '.sng'), 'wb') as f:
-            f.write(stream.read())
-        self.add(uid, meta)
-        self._save_hdr(uid)
-
-    def __getitem__(self, uid):
-        return self._songs[uid]
-
-
 class Client(object):
-    def __init__(self, url, content_dir='content'):
+    def __init__(self, url):
         self._httpc = HTTPClient(url)
-        self._content = Content(content_dir)
-        self._thread = Thread(target=self._background)
         self._exit = False
         self._last = None
-
-    def _background(self):
-        """
-        Periodically checks for new updates and pre-fetchs songs
-        """
-        while not self._exit:
-            q = self._httpc.get_queue()
-            for meta in q:
-                self.download(meta)
-            time.sleep(30)
-
-    def initialize(self):
-        # start background thread
-        signal.signal(signal.SIGINT, self._sigint_handler)
-        self._thread.daemon = True
-        self._thread.start()
-
-    def _sigint_handler(self, signal, frame):
-        self._exit = True
 
     def iter_songs(self):
         while not self._exit:
@@ -125,7 +68,7 @@ class Client(object):
             if queue:
                 for meta in queue:
                     if not self._last or \
-                      meta['time'] > self._last['time']:
+                      meta['time_add'] > self._last['time_add']:
                         print 'enqueueing', meta
                         yield meta
                         self._last = meta
@@ -139,16 +82,6 @@ class Client(object):
     def notify_stop(self):
         self._httpc.notify_stop()
 
-    def download(self, meta, force=False):
-        uid = meta['uid']
-        if not force:
-            if uid in self._content:
-                return
-        print 'downloading', uid
-        stream = self._httpc.get_stream(uid)
-        self._content.store(uid, meta, stream)
-
     def shutdown(self):
         print 'shutting down'
         self._exit = True
-        self._thread.join()

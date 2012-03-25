@@ -9,14 +9,8 @@ import vlc
 class Player(object):
 
     def __init__(self, config):
-        cdir = os.path.expanduser('~/.radiocrepe/songs/')
-
-        if not os.path.exists(cdir):
-            os.makedirs(cdir)
-
-        self._client = Client(config.server, content_dir=cdir)
+        self._client = Client(config.server)
         self._exit = False
-        self._content_dir = cdir
         self._config = config
         self._playing = False
         self._index = 0
@@ -27,16 +21,15 @@ class Player(object):
         """
 
     def run(self):
-        self._client.initialize()
         self.initialize()
 
         last_ts = None
 
         while not self._exit:
             for song in self._client.iter_songs():
-                if song and song['time'] != last_ts:
+                if song and song['time_add'] != last_ts:
                     self._enqueue(song)
-                    last_ts = song['time']
+                    last_ts = song['time_add']
 
                     if not self._playing:
                         self._play_index(self._index)

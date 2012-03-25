@@ -77,6 +77,8 @@ $(function() {
         initialize: function() {
             var ws = new WebSocket(url.replace('http', 'ws') + "updates/");
 
+            App.get_current_status()
+
             $('#play').click(function() {
                 App.search($('#term').val());
             });
@@ -94,23 +96,34 @@ $(function() {
                 result = JSON.parse(msg.data);
                 if (result) {
                     if (result.op == 'add') {
-                        App.add(result['data']);
+                        App.add(result['data'], result['time_add']);
                     } else if (result.op == 'play') {
-                        App.play(result['data']);
+                        App.play(result['data'], result['time_add']);
                     } else if (result.op == 'stop') {
                         App.stop();
                     }
                 }
             };
         },
-        play: function (song) {
+        get_current_status: function() {
+            $.ajax({url: '/playing/',
+                    type: 'GET',
+                    success: function(result) {
+                        if (result) {
+                            App.play(result, result.time_add);
+                        } else {
+                            App.stop();
+                        }
+                    }});
+        },
+        play: function (song, time_add) {
             console.debug('playing', song);
             $("#now").html(song_template(song))
             _(collection.models).each(function(item){
-                if (item.get('time') <= song.time) {
+                if (item.get('time_add') <= time_add) {
                     collection.remove(item);
                 }
-            }, this);
+            });
             update_artist_info(song.artist);
         },
 
@@ -119,8 +132,9 @@ $(function() {
             $("#picture").hide();
         },
 
-        add: function(song) {
+        add: function(song, time_add) {
             console.debug('adding', song);
+            song.time_add = time_add;
             collection.add(song);
         },
 
