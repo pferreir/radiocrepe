@@ -24,14 +24,18 @@
   </script>
 
 </head>
-<body>
+<body class="shadow">
+  {% if user: %}
+    {% include 'user.html' %}
+  {% endif %}
   <h1>{{title}}</h1>
+  {% include 'sys_info.html' %}
   <h2 id="now_playing">now playing</h2>
   <div id="now_playing_box" class="carved">
      <img id="picture"/>
      <div id="now"></div>
   </div>
-  <h2 id="queued_up">queued up</h2>
+  <h2 id="queued_up\">queued up</h2>
   <ul class="song_list">
   </ul>
   <div id="add_box">

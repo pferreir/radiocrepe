@@ -1,8 +1,7 @@
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy import Column, Integer, String, Boolean
 
-
-Base = declarative_base()
+from radiocrepe.db.base import DBObject
 
 
 class SongMixin(object):
@@ -28,7 +27,7 @@ class SongMixin(object):
         return d
 
 
-class Song(SongMixin, Base):
+class Song(SongMixin, DBObject):
     __tablename__ = 'songs'
 
     fpath = Column(String)
@@ -37,7 +36,7 @@ class Song(SongMixin, Base):
         return u"<Song:{0} @ {1}>".format(self.uid, self.fpath)
 
 
-class RemoteSong(SongMixin, Base):
+class RemoteSong(SongMixin, DBObject):
     __tablename__ = 'song_index'
     node_id = Column(String, primary_key=True)
     available = Column(Boolean, default=True)
@@ -46,19 +45,19 @@ class RemoteSong(SongMixin, Base):
         return u"<RemoteSong:{0} @ {1}>".format(self.uid, self.node_id)
 
 
-class Info(Base):
+class Info(DBObject):
     __tablename__ = 'info'
     last_sent = Column(Integer, primary_key=True)
 
 
-class NodeEntry(Base):
+class NodeEntry(DBObject):
     __tablename__ = 'nodes'
     node_id = Column(String, primary_key=True)
     address = Column(String)
     active = Column(Boolean, default=True)
 
 
-class HubEntry(Base):
+class HubEntry(DBObject):
     __tablename__ = 'hubs'
     hub_id = Column(String, primary_key=True)
     address = Column(String)

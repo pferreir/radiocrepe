@@ -1,5 +1,5 @@
 import argparse
-from radiocrepe import server, player, node
+from radiocrepe import web, player, node
 
 import logging
 
@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
 
     if args.action == 'server':
-        server.main(args, root_logger, handler)
+        web.main(args, root_logger, handler)
     elif args.action == 'node':
         node.main(args, root_logger, handler)
     else:

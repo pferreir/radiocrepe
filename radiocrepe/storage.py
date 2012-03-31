@@ -7,15 +7,12 @@ import time
 
 # 3rd party
 import magic
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, or_
 
 # radiocrepe
 from radiocrepe.metadata import MIME_TYPES
-from radiocrepe.db import Song, RemoteSong, Info
-from radiocrepe.network import NodeRegistry, HubRegistry
-
-Session = sessionmaker()
+from radiocrepe.db import NodeIndex, HubDB, Song, RemoteSong, Info
+from radiocrepe.network import NodeRegistry
 
 
 class Storage(object):
@@ -24,16 +21,8 @@ class Storage(object):
     def bind(cls, config):
         return cls(config)
 
-    def __init__(self, config):
-        self._engine = create_engine('sqlite:///%s' % os.path.join(
-            config['content_dir'], 'songs.db'))
-        Session.configure(bind=self._engine)
-        self._session = Session()
-        self._config = config
-        self._logger = logging.getLogger('radiocrepe.storage')
-
     def initialize(self):
-        Song.metadata.create_all(self._engine)
+        Song.metadata.create_all(self.db.engine)
 
     def _file_metadata(self, mtype, fpath):
         return MIME_TYPES[mtype](fpath)
@@ -54,24 +43,24 @@ class Storage(object):
 
     def _index(self, uid=None, timestamp=None, **mdata):
 
-        if (self._session.query(self._songClass).filter_by(uid=uid).first()):
+        if (self.db.query(self._songClass).filter_by(uid=uid).first()):
             return
 
         obj = self._songClass(timestamp=int(time.time()), uid=uid, **mdata)
         self._logger.debug(u'Indexing %s' % (obj))
 
-        self._session.add(obj)
-        self._session.commit()
+        self.db.add(obj)
+        self.db.commit()
 
     def search(self, term):
         key = "%%%s%%" % term
-        return list(r.dict() for r in self._session.query(
+        return list(r.dict() for r in self.db.query(
             self._songClass).filter(or_(self._songClass.artist.like(key),
                                         self._songClass.title.like(key)),
                                     self._songClass.available == True))
 
     def get(self, uid, default=None):
-        first = self._session.query(self._songClass).filter_by(uid=uid).first()
+        first = self.db.query(self._songClass).filter_by(uid=uid).first()
         return first.dict() if first else default
 
     def __contains__(self, uid):
@@ -87,12 +76,17 @@ class NodeStorage(Storage):
 
     _songClass = Song
 
+    def __init__(self, config):
+        self.db = HubDB(config)
+        self._config = config
+        self._logger = logging.getLogger('radiocrepe.storage')
+
     @property
     def last_sent(self):
         """
         The last time a record was sent to the server
         """
-        res = self._session.query(Info.last_sent).scalar()
+        res = self.db.query(Info.last_sent).scalar()
 
         if res:
             return res
@@ -101,16 +95,16 @@ class NodeStorage(Storage):
 
     @last_sent.setter
     def last_sent(self, value):
-        info = self._session.query(Info).first()
+        info = self.db.query(Info).first()
         if info:
             info.last_sent = value
         else:
-            self._session.add(Info(last_sent=value))
-        self._session.commit()
+            self.db.add(Info(last_sent=value))
+        self.db.commit()
 
     def new_records(self):
         last_sent = self.last_sent or 0
-        for obj in self._session.query(self._songClass).\
+        for obj in self.db.query(self._songClass).\
                 filter(self._songClass.timestamp > last_sent):
             song = obj.dict()
             # no need for remote host to know this
@@ -152,35 +146,32 @@ class DistributedStorage(Storage):
     _songClass = RemoteSong
 
     def __init__(self, config):
-        self._engine = create_engine('sqlite:///' + os.path.join(
-            config['content_dir'], 'radiocrepe_index.db'))
-        Session.configure(bind=self._engine)
-        self._session = Session()
+        self.db = NodeIndex(config)
         self._config = config
         self._logger = logging.getLogger('radiocrepe.dist_storage')
         self.node_registry = NodeRegistry(self)
 
     def initialize(self):
-        RemoteSong.metadata.create_all(self._engine)
+        RemoteSong.metadata.create_all(self.db.engine)
         self.node_registry.detach_all()
 
     def mark_available(self, node_id):
         """
         Mark all songs stored in this node as available
         """
-        self._session.query(self._songClass).filter_by(node_id=node_id).update({
+        self.db.query(self._songClass).filter_by(node_id=node_id).update({
             self._songClass.available: True
         })
-        self._session.commit()
+        self.db.commit()
 
     def mark_unavailable(self, node_id):
         """
         Mark all songs in this node as unavailable
         """
-        self._session.query(self._songClass).filter_by(node_id=node_id).update({
+        self.db.query(self._songClass).filter_by(node_id=node_id).update({
             self._songClass.available: False
         })
-        self._session.commit()
+        self.db.commit()
 
     def file(self, uid):
         r = self._node_registry.get(uid)
@@ -192,3 +183,9 @@ class DistributedStorage(Storage):
     def update_node(self, node_id, data):
         for song in data:
             self._index(node_id=node_id, **song)
+
+    @property
+    def stats(self):
+        return {
+            "nodes": self.node_registry.stats
+            }

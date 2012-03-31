@@ -18,6 +18,10 @@ body {
     font-family: Share;
 }
 
+.shadow {
+    box-shadow: 0px 0px 5px 1px #222;
+}
+
 .carved {
     background: #eee;
     border-radius: 5px;
@@ -120,4 +124,28 @@ h2#now_playing {
 
 #now_playing {
     color: #bbb;
+}
+
+#user_box {
+    position: fixed;
+    right: 0;
+    top: 0;
+    padding: 5px;
+    background: #888;
+    border-radius: 0 0 0 5px;
+}
+
+#user_box .user_picture {
+    width: 32px;
+    height: 32px;
+}
+
+ul#sys_info li {
+    display: inline;
+    list-style-type: none;
+    padding: 0;
+}
+
+ul#sys_info {
+    padding: 0;
 }
