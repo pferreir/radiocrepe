@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "Radiocrepe",
+    name = "radiocrepe",
     version = "0.0.1",
     author = "Pedro Ferreira",
     author_email = "ilzogoiby@gmail.com",

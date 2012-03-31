@@ -1,4 +1,5 @@
 from flask import Blueprint, url_for, request, session, redirect, current_app
+from flask.helpers import find_package
 from flaskext.oauth import OAuth
 
 from radiocrepe.db import NodeIndex
@@ -8,12 +9,60 @@ import os
 import hashlib
 
 
-oauth = OAuth()
-web_auth = Blueprint('auth', __name__,
-                 template_folder='templates')
+class OAuthAuthenticator(object):
+    pass
 
 
-def get_facebook_oauth_token():
+class FacebookAuthenticator(OAuthAuthenticator):
+
+    def configure(self, config):
+        self._facebook = oauth.remote_app(
+            'facebook',
+            base_url='https://graph.facebook.com/',
+            request_token_url=None,
+            access_token_url='/oauth/access_token',
+            authorize_url='https://www.facebook.com/dialog/oauth',
+            request_token_params={'scope': 'email'},
+            consumer_key=config['oauth_key'],
+            consumer_secret=config['oauth_secret'])
+
+        return self._facebook
+
+    def get_user_data(self):
+            return self._facebook.get('/me?fields=id,name,picture')
+
+
+class GitHubAuthenticator(OAuthAuthenticator):
+
+    def configure(self, config):
+        self._github = oauth.remote_app(
+            'github',
+            base_url='https://api.github.com/',
+            request_token_url=None,
+            access_token_url='https://github.com/login/oauth/access_token',
+            authorize_url='https://github.com/login/oauth/authorize',
+            consumer_key=config['oauth_key'],
+            consumer_secret=config['oauth_secret'])
+
+        return self._github
+
+    def get_user_data(self):
+        data = self._github.get('/user').data
+        return {
+            "picture": data['avatar_url'],
+            "name": data['name'],
+            "id": data["id"],
+            "email": data["email"]
+            }
+
+
+OAUTH_CONFIGS = {
+    'facebook': FacebookAuthenticator,
+    'github': GitHubAuthenticator
+    }
+
+
+def get_oauth_token():
     return session.get('oauth_token')
 
 
@@ -22,45 +71,52 @@ def configure_auth(app):
 
     app.auth = {}
 
-    if 'facebook_key' not in config or 'facebook_secret' not in config:
-        raise Exception('Please set your facebook keys!')
+    if 'oauth_provider' not in config or \
+      config['oauth_provider'] not in OAUTH_CONFIGS:
+        raise Exception('Please select a valid oauth provider!')
 
-    facebook = oauth.remote_app(
-        'facebook',
-        base_url='https://graph.facebook.com/',
-        request_token_url=None,
-        access_token_url='/oauth/access_token',
-        authorize_url='https://www.facebook.com/dialog/oauth',
-        consumer_key=config['facebook_key'],
-        consumer_secret=config['facebook_secret'],
-        request_token_params={'scope': 'email'})
+    if 'oauth_key' not in config or 'oauth_secret' not in config:
+        raise Exception('Please set your oauth key/secret!')
 
-    app.auth['facebook'] = facebook
-    facebook.tokengetter(get_facebook_oauth_token)
+    provider = config['oauth_provider']
+    authenticator = OAUTH_CONFIGS[provider]()
+    remote_app = authenticator.configure(config)
+
+    app.auth = {
+        'authenticator': authenticator,
+        'provider': provider,
+        'app': remote_app
+    }
+    remote_app.tokengetter(get_oauth_token)
+
+
+oauth = OAuth()
+web_auth = Blueprint('auth', __name__,
+                 template_folder='templates')
 
 
 @web_auth.route('/login')
 def login():
-    return current_app.auth['facebook'].authorize(
-        callback=url_for('auth.facebook_authorized',
+    return current_app.auth['app'].authorize(
+        callback=url_for('auth.oauth_authorized',
         next=request.args.get('next') or request.referrer or None,
         _external=True))
 
 
 @web_auth.route('/login/authorized')
-def facebook_authorized():
+def oauth_authorized():
 
-    facebook = current_app.auth['facebook']
+    remote_app = current_app.auth['app']
 
     # ripped off from Flask-OAuth
-    # since `facebook` should be defined in app start time
+    # since `remote_app` should be defined in app start time
     if 'oauth_verifier' in request.args:
-        data = facebook.handle_oauth1_response()
+        data = remote_app.handle_oauth1_response()
     elif 'code' in request.args:
-        data = facebook.handle_oauth2_response()
+        data = remote_app.handle_oauth2_response()
     else:
-        data = facebook.handle_unknown_response()
-    facebook.free_request_token()
+        data = remote_app.handle_unknown_response()
+    remote_app.free_request_token()
     # ---
 
     if data is None:
@@ -71,14 +127,17 @@ def facebook_authorized():
 
     db = NodeIndex(current_app.config)
 
-    session['oauth_token'] = (resp['access_token'], '')
-    user = facebook.get('/me?fields=id,name,picture')
+    session['oauth_token'] = (data['access_token'], '')
+    user = current_app.auth['authenticator'].get_user_data()
 
-    session['user'] = user.data
+    session['user'] = user
+    identity = current_app.auth['provider'] + ':' + str(user['id'])
+    user_id = hashlib.sha1(identity).hexdigest()
 
-    if not User.get(db.session, user.data['id']):
-        user_id = hashlib.sha1('facebook:' + user.data['id']).hexdigest()
-        db.session.add(User(user_id=user_id, identity=user.data['id'],
+    user_db = User.get(db.session, user_id)
+
+    if not user_db:
+        db.session.add(User(user_id=user_id, identity=identity,
                             secret_key=os.urandom(10).encode('hex')))
 
         db.session.commit()
