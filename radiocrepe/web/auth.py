@@ -8,37 +8,62 @@ import os
 import hashlib
 
 
-FACEBOOK_APP_ID = '198279803608888'
-FACEBOOK_APP_SECRET = 'a0c01fd66de11780f326897d4ac312ac'
-
 oauth = OAuth()
-
-facebook = oauth.remote_app('facebook',
-    base_url='https://graph.facebook.com/',
-    request_token_url=None,
-    access_token_url='/oauth/access_token',
-    authorize_url='https://www.facebook.com/dialog/oauth',
-    consumer_key=FACEBOOK_APP_ID,
-    consumer_secret=FACEBOOK_APP_SECRET,
-    request_token_params={'scope': 'email'}
-)
-
-
 web_auth = Blueprint('auth', __name__,
                  template_folder='templates')
 
 
+def get_facebook_oauth_token():
+    return session.get('oauth_token')
+
+
+def configure_auth(app):
+    config = app.config
+
+    app.auth = {}
+
+    if 'facebook_key' not in config or 'facebook_secret' not in config:
+        raise Exception('Please set your facebook keys!')
+
+    facebook = oauth.remote_app(
+        'facebook',
+        base_url='https://graph.facebook.com/',
+        request_token_url=None,
+        access_token_url='/oauth/access_token',
+        authorize_url='https://www.facebook.com/dialog/oauth',
+        consumer_key=config['facebook_key'],
+        consumer_secret=config['facebook_secret'],
+        request_token_params={'scope': 'email'})
+
+    app.auth['facebook'] = facebook
+    facebook.tokengetter(get_facebook_oauth_token)
+
+
 @web_auth.route('/login')
 def login():
-    return facebook.authorize(callback=url_for('auth.facebook_authorized',
+    return current_app.auth['facebook'].authorize(
+        callback=url_for('auth.facebook_authorized',
         next=request.args.get('next') or request.referrer or None,
         _external=True))
 
 
 @web_auth.route('/login/authorized')
-@facebook.authorized_handler
-def facebook_authorized(resp):
-    if resp is None:
+def facebook_authorized():
+
+    facebook = current_app.auth['facebook']
+
+    # ripped off from Flask-OAuth
+    # since `facebook` should be defined in app start time
+    if 'oauth_verifier' in request.args:
+        data = facebook.handle_oauth1_response()
+    elif 'code' in request.args:
+        data = facebook.handle_oauth2_response()
+    else:
+        data = facebook.handle_unknown_response()
+    facebook.free_request_token()
+    # ---
+
+    if data is None:
         return 'Access denied: reason=%s error=%s' % (
             request.args['error_reason'],
             request.args['error_description']
@@ -64,8 +89,3 @@ def facebook_authorized(resp):
         return redirect(next_page)
     else:
         return redirect(url_for('index'))
-
-
-@facebook.tokengetter
-def get_facebook_oauth_token():
-    return session.get('oauth_token')

@@ -15,13 +15,10 @@ from radiocrepe.storage import DistributedStorage
 from radiocrepe.web.util import with_storage
 
 # blueprints
-from radiocrepe.web.auth import web_auth
+from radiocrepe.web.auth import web_auth, configure_auth
 from radiocrepe.web.queue import web_queue
 from radiocrepe.web.hub import web_hub
 from radiocrepe.web.live import web_live
-
-
-SECRET_KEY = 'development key'
 
 
 app = Flask(__name__)
@@ -29,7 +26,6 @@ app.register_blueprint(web_auth)
 app.register_blueprint(web_queue)
 app.register_blueprint(web_hub)
 app.register_blueprint(web_live)
-app.secret_key = SECRET_KEY
 
 
 @app.route('/song/<uid>/')
@@ -62,6 +58,7 @@ def artist_info(name):
         return Response(jsonify(result='ERR_NO_LASTFM_KEY').data,
                         mimetype='application/json', status=404)
 
+
 @app.route('/')
 @with_storage(DistributedStorage)
 def index(storage):
@@ -83,6 +80,12 @@ def main(args, root_logger, handler):
         app.logger.addHandler(handler)
     else:
         app.debug = True
+
+    if not config.get('secret_key'):
+        raise Exception('Please set a secret key!')
+
+    app.secret_key = str(config['secret_key'])
+    configure_auth(app)
 
     http_server = WSGIServer((config['host'], int(config['port'])),
                               app, handler_class=WebSocketHandler)
