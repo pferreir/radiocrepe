@@ -1,9 +1,7 @@
 from Queue import Queue, Empty
 
-from flask import Blueprint, request, json, current_app
+from flask import Blueprint, request, json
 from gevent import sleep, greenlet
-
-from radiocrepe.storage import DistributedStorage
 
 
 web_live = Blueprint('live', __name__,
@@ -19,10 +17,8 @@ def broadcast(mtype, time, uid):
         queue.put((mtype, time, uid))
 
 
-def message(msg):
+def message(storage, msg):
     mtype, ts, uid = msg
-
-    storage = DistributedStorage.bind(current_app.config)
     meta = storage.get(uid, None)
 
     return json.dumps({'op': mtype, 'time_add': ts, 'data': meta})

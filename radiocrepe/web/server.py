@@ -10,9 +10,11 @@ from flask import Flask, jsonify, Response, render_template, \
      redirect, session
 
 # radiocrepe
-from radiocrepe.storage import DistributedStorage
 from radiocrepe.util import load_config
+from radiocrepe.storage import DistributedStorage
+from radiocrepe.web.util import with_storage
 
+# blueprints
 from radiocrepe.web.auth import web_auth
 from radiocrepe.web.queue import web_queue
 from radiocrepe.web.hub import web_hub
@@ -31,11 +33,11 @@ app.secret_key = SECRET_KEY
 
 
 @app.route('/song/<uid>/')
-def song(uid):
+@with_storage(DistributedStorage)
+def song(uid, storage):
     """
     retrieve the song from one of the storage nodes
     """
-    storage = DistributedStorage.bind(app.config)
     meta = storage.get(uid, None)
     if meta is None:
         return 'song not found', 404
@@ -60,10 +62,9 @@ def artist_info(name):
         return Response(jsonify(result='ERR_NO_LASTFM_KEY').data,
                         mimetype='application/json', status=404)
 
-
 @app.route('/')
-def index():
-    storage = DistributedStorage.bind(app.config)
+@with_storage(DistributedStorage)
+def index(storage):
     return render_template('queue.html', title=app.config['title'],
                            user=session.get('user'), storage_data=storage.stats,
                            users_data=storage.db.user_stats)

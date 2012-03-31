@@ -6,6 +6,7 @@ from flask import Blueprint, request, json, jsonify,\
      current_app, Response
 
 from radiocrepe.storage import DistributedStorage
+from radiocrepe.web.util import with_storage
 from radiocrepe.web.live import broadcast
 
 web_queue = Blueprint('queue', __name__,
@@ -17,7 +18,8 @@ queue = []
 
 
 @web_queue.route('/playing/')
-def _playing():
+@with_storage(DistributedStorage)
+def _playing(storage):
     if playing:
         storage = DistributedStorage.bind(current_app.config)
         meta = storage.get(playing[1], None)
@@ -29,8 +31,8 @@ def _playing():
 
 
 @web_queue.route('/enqueue/', methods=['POST'])
-def enqueue():
-    storage = DistributedStorage.bind(current_app.config)
+@with_storage(DistributedStorage)
+def enqueue(storage):
     uid = request.form.get('uid')
     if uid in storage:
         ts = time.time()
@@ -64,8 +66,8 @@ def _notify_stop():
 
 
 @web_queue.route('/queue/')
-def _queue():
-    storage = DistributedStorage.bind(current_app.config)
+@with_storage(DistributedStorage)
+def _queue(storage):
     res = []
     for ts, uid in queue:
         elem = storage.get(uid, None)
@@ -76,8 +78,8 @@ def _queue():
 
 
 @web_queue.route('/play/<term>/', methods=['POST'])
-def _search(term):
-    storage = DistributedStorage.bind(current_app.config)
+@with_storage(DistributedStorage)
+def _search(term, storage):
     term = unquote(term)
 
     res = storage.search(term)
