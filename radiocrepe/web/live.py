@@ -1,8 +1,11 @@
+import time
 from Queue import Queue, Empty
 
 from flask import Blueprint, request, json
 from gevent import sleep, greenlet
 
+from radiocrepe.web.util import with_storage
+from radiocrepe.storage import DistributedStorage
 
 web_live = Blueprint('live', __name__,
                      template_folder='templates')
@@ -11,10 +14,10 @@ web_live = Blueprint('live', __name__,
 messages = {}
 
 
-def broadcast(mtype, time, uid):
+def broadcast(mtype, uid, ts=None):
     global messages
     for queue in messages.itervalues():
-        queue.put((mtype, time, uid))
+        queue.put((mtype, ts or time.time(), uid))
 
 
 def message(storage, msg):
@@ -25,7 +28,8 @@ def message(storage, msg):
 
 
 @web_live.route('/updates/')
-def updates():
+@with_storage(DistributedStorage)
+def updates(storage):
     global messages
     guid = id(greenlet.getcurrent())
 
@@ -38,7 +42,7 @@ def updates():
                 # receive stuff here
                 try:
                     while True:
-                        msg = message(queue.get_nowait())
+                        msg = message(storage, queue.get_nowait())
                         ws.send(msg)
                 except Empty:
                     sleep(1)

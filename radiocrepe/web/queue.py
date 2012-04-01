@@ -37,7 +37,7 @@ def enqueue(storage):
     if uid in storage:
         ts = time.time()
         queue.append((ts, uid))
-        broadcast('add', ts, uid)
+        broadcast('add', uid, ts=ts)
         return jsonify({'id': uid})
     else:
         return Response(jsonify(result='ERR_NO_SUCH_SONG', id=uid).data,
@@ -50,7 +50,7 @@ def _notify_start():
     global playing
     try:
         playing = queue.pop(0)
-        broadcast('play', playing[0], playing[1])
+        broadcast('play', playing[1], ts=playing[0])
         return json.dumps(len(queue))
     except IndexError:
         return Response(jsonify(result='ERR_NO_NEXT').data,
@@ -60,7 +60,7 @@ def _notify_start():
 @web_queue.route('/notify/stop/', methods=['POST'])
 def _notify_stop():
     global playing
-    broadcast('stop', playing[0], playing[1])
+    broadcast('stop', playing[1], ts=playing[0])
     playing = None
     return ''
 
@@ -88,7 +88,7 @@ def _search(term, storage):
         ts = time.time()
         meta = random.choice(res)
         queue.append((ts, meta['uid']))
-        broadcast('add', ts, meta['uid'])
+        broadcast('add', meta['uid'], ts=ts)
         meta['time'] = ts
         return jsonify(meta)
     else:

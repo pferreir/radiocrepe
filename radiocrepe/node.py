@@ -2,12 +2,10 @@
 from threading import Thread
 from itertools import islice
 import time
-from urllib2 import urlopen, HTTPError
 from urllib import  urlencode
-from contextlib import closing
-import uuid
 import os
 import atexit
+import requests
 
 # 3rd party
 from flask import Flask, json, Response
@@ -18,6 +16,10 @@ from radiocrepe.util import load_config
 
 
 app = Flask(__name__)
+
+
+def auth_request(config):
+    return requests.auth.HTTPDigestAuth(config['user_id'], config['secret_key'])
 
 
 @app.route('/song/<uid>/')
@@ -48,12 +50,13 @@ class StorageThread(Thread):
             'server': "{host}:{port}".format(**self._config),
             'songs': json.dumps(batch)
             }
-        try:
-            with closing(urlopen("http://%s/node/upload/" %
-                                 self._config['server'],
-                                 urlencode(data))):
-                return True
-        except HTTPError:
+
+        r = requests.post("http://%s/node/upload/" % self._config['server'],
+                          data=urlencode(data), auth=auth_request(self._config))
+        if r.status_code == 200:
+            return True
+        else:
+            self._logger.error('upload failed (%s): %s' % (r.status_code, r.content))
             return False
 
     def run(self):
@@ -68,20 +71,35 @@ class StorageThread(Thread):
             batch = list(islice(records, 50))
             if not batch:
                 break
-            self._upload(batch)
+            if not self._upload(batch):
+                return
 
         storage.last_sent = int(time.time())
 
 
-def attach_to_server(config):
-    urlopen("http://%s/node/attach/" % config['server'],
-            urlencode({'node_id': config['node_id'],
-                       'address': "{host}:{port}".format(**config)}))
+def attach_to_server(logger, config):
+    r = requests.post("http://%s/node/attach/" % config['server'],
+                      data=urlencode({'node_id': config['node_id'],
+                                     'address': "{host}:{port}".format(**config)}),
+                      auth=auth_request(config))
+
+    if r.status_code == 200:
+        return True
+    else:
+        logger.error('attach failed (%s): %s' % (r.status_code, r.content))
+        return False
 
 
-def detach_from_server(config):
-    urlopen("http://%s/node/detach/" % config['server'],
-            urlencode({'node_id': config['node_id']}))
+def detach_from_server(logger, config):
+    r = requests.post("http://%s/node/detach/" % config['server'],
+                      data=urlencode({'node_id': config['node_id']}),
+                      auth=auth_request(config))
+
+    if r.status_code == 200:
+        return True
+    else:
+        logger.error('detach failed (%s): %s' % (r.status_code, r.content))
+        return False
 
 
 def main(args, logger, handler):
@@ -94,8 +112,8 @@ def main(args, logger, handler):
     app.config.update(config)
     app.logger.addHandler(handler)
 
-    attach_to_server(app.config)
-    atexit.register(detach_from_server, config)
+    attach_to_server(logger, app.config)
+    atexit.register(detach_from_server, logger, config)
 
     t = StorageThread(config, logger)
     t.start()

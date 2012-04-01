@@ -28,7 +28,7 @@ $(function() {
     });
 
     var QueueView = Backbone.View.extend({
-        el: $('body'),
+        el: $('ul#song_list'),
         initialize: function() {
             this.counter = 0;
             _(this).bindAll('addItem', 'render', 'removeItem');
@@ -43,7 +43,7 @@ $(function() {
             var itemView = new ItemView({
                 model: item
             });
-            $('ul', this.el).append($(itemView.render().el).fadeIn());
+            $(this.el).append($(itemView.render().el).fadeIn(0));
         },
         removeItem: function(item) {
             item.trigger('remove');

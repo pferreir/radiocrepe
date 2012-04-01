@@ -35,7 +35,7 @@ class NodeStorage(Storage):
             return None
 
     @last_sent.setter
-    def set_last_sent(self, value):
+    def last_sent(self, value):
         info = self.db.query(Info).first()
         if info:
             info.last_sent = value

@@ -41,11 +41,11 @@ h2 {
     margin: 15px 0 0 0;
 }
 
-ul.song_list {
+ul#song_list {
     padding: 0;
 }
 
-ul.song_list li {
+ul#song_list li {
     padding: 5px;
     margin-bottom: 5px;
     list-style-type: none;
@@ -63,11 +63,11 @@ ul.song_list li {
     font-size: 12px;
 }
 
-ul.song_list li .download_link {
+ul#song_list li .download_link {
     float: right;
 }
 
-ul.song_list li .title {
+ul#song_list li .title {
     display: inline-block;
     max-width: 230px;
     margin-left: 10px;
@@ -76,7 +76,7 @@ ul.song_list li .title {
     text-overflow: ellipsis;
 }
 
-ul.song_list li .artist {
+ul#song_list li .artist {
     font-weight: bold;
 }
 

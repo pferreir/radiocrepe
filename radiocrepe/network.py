@@ -31,7 +31,7 @@ class NodeRegistry(object):
             self.set_node_active(node_id, True)
         else:
             self.db.add(NodeEntry(node_id=node_id, address=server,
-                                  owner=owner))
+                                  owner_id=owner))
             self.db.commit()
         self._storage.mark_available(node_id)
 
