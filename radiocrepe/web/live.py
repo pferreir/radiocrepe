@@ -14,17 +14,10 @@ web_live = Blueprint('live', __name__,
 messages = {}
 
 
-def broadcast(mtype, uid, ts=None):
+def broadcast(mtype, data, ts=None):
     global messages
     for queue in messages.itervalues():
-        queue.put((mtype, ts or time.time(), uid))
-
-
-def message(storage, msg):
-    mtype, ts, uid = msg
-    meta = storage.get(uid, None)
-
-    return json.dumps({'op': mtype, 'time_add': ts, 'data': meta})
+        queue.put((mtype, ts or time.time(), data))
 
 
 @web_live.route('/updates/')
@@ -42,7 +35,12 @@ def updates(storage):
                 # receive stuff here
                 try:
                     while True:
-                        msg = message(storage, queue.get_nowait())
+                        mtype, ts, data = queue.get_nowait()
+                        msg = json.dumps({
+                            'mtype': mtype,
+                            'ts': ts,
+                            'data': data
+                            })
                         ws.send(msg)
                 except Empty:
                     sleep(1)

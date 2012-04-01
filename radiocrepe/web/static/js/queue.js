@@ -94,13 +94,18 @@ $(function() {
 
             ws.onmessage = function(msg) {
                 result = JSON.parse(msg.data);
+                console.debug('got', result)
                 if (result) {
-                    if (result.op == 'add') {
-                        App.add(result['data'], result['time_add']);
-                    } else if (result.op == 'play') {
-                        App.play(result['data'], result['time_add']);
-                    } else if (result.op == 'stop') {
+                    if (result.mtype == 'add') {
+                        App.add(result['data'], result['ts']);
+                    } else if (result.mtype == 'play') {
+                        App.play(result['data'], result['ts']);
+                    } else if (result.mtype == 'stop') {
                         App.stop();
+                    } else if (result.mtype == 'attach') {
+                        NotificationMgr.create(result['data']['node_id'], 'storage attached');
+                    } else if (result.mtype == 'detach') {
+                        NotificationMgr.create(result['data']['node_id'], 'storage detached');
                     }
                 }
             };
@@ -120,7 +125,7 @@ $(function() {
             console.debug('playing', song);
             $("#now").html(song_template(song))
             _(collection.models).each(function(item){
-                if (item.get('time_add') <= time_add) {
+                if (item.get('ts') <= time_add) {
                     collection.remove(item);
                 }
             });
@@ -134,7 +139,8 @@ $(function() {
 
         add: function(song, time_add) {
             console.debug('adding', song);
-            song.time_add = time_add;
+            NotificationMgr.create(song.artist + " - " + song.title, 'Song added');
+            song.ts = time_add;
             collection.add(song);
         },
 

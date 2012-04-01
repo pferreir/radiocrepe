@@ -20,8 +20,7 @@ class CredentialProvider:
 
     def get(self, user_id):
         user = self.session.query(User).get(user_id)
-
-        return user.secret_key if user else None
+        return user
 
     def __contains__(self, user):
         return self.get(user) != None
@@ -58,7 +57,14 @@ def node_detach(registry, user):
     """
     Detach from a node
     """
-    registry.detach(request.form.get('node_id'))
+    node_id = request.form.get('node_id')
+
+    registry.detach(node_id)
+    broadcast('detach', {
+        'node_id': node_id,
+        'owner': user.dict()
+        })
+
     return ''
 
 
@@ -71,10 +77,10 @@ def node_attach(registry, user):
     """
     node_id = request.form.get('node_id')
 
-    registry.attach(node_id, request.form.get('address'), user)
+    registry.attach(node_id, request.form.get('address'), user.user_id)
     broadcast('attach', {
         'node_id': node_id,
-        'owner': user
+        'owner': user.dict()
         })
     return ''
 

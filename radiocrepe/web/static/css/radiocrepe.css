@@ -127,7 +127,7 @@ h2#now_playing {
 }
 
 #user_box {
-    position: fixed;
+    position: absolute;
     right: 0;
     top: 0;
     padding: 5px;

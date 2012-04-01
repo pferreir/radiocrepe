@@ -73,11 +73,12 @@ class with_digest_auth(object):
             if (time.time() - ts) > 600:
                 return self.challenge('nonce expired', stale=True)
 
-            result = self.response(auth.username, self.cred_provider.get(auth.username),
+            result = self.response(auth.username, self.cred_provider.get(auth.username).secret_key,
                                     request.method, request.path, auth.nonce,
                                     auth.cnonce, auth.nc, auth.qop)
 
             if auth.nonce == nonce and auth.realm == self.cred_provider.realm and auth.response == result:
-                return f(*args, user=auth.username, **kwargs)
+                return f(*args, user=self.cred_provider.get(auth.username), 
+                         **kwargs)
             return self.challenge('wrong credentials' , code=403)
         return _wrapper
