@@ -19,7 +19,6 @@ class NodeRegistry(object):
 
     def __init__(self, storage):
         self._logger = logging.getLogger('radiocrepe.node_reg')
-        NodeEntry.metadata.create_all(storage.db.engine)
         self.db = storage.db
         self._storage = storage
 
@@ -94,4 +93,3 @@ class HubRegistry(object):
     def __init__(self, storage):
         self._logger = logging.getLogger('radiocrepe.hub_reg')
         self._storage = storage
-        HubEntry.metadata.create_all(storage.db.engine)

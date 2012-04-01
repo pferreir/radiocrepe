@@ -1,7 +1,8 @@
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship, backref
 
-from radiocrepe.db.base import DBObject
+from radiocrepe.db.base import NodeSideBase, HubSideBase
 
 
 class SongMixin(object):
@@ -27,7 +28,7 @@ class SongMixin(object):
         return d
 
 
-class Song(SongMixin, DBObject):
+class Song(SongMixin, NodeSideBase):
     __tablename__ = 'songs'
 
     fpath = Column(String)
@@ -36,8 +37,9 @@ class Song(SongMixin, DBObject):
         return u"<Song:{0} @ {1}>".format(self.uid, self.fpath)
 
 
-class RemoteSong(SongMixin, DBObject):
+class RemoteSong(SongMixin, HubSideBase):
     __tablename__ = 'song_index'
+
     node_id = Column(String, primary_key=True)
     available = Column(Boolean, default=True)
 
@@ -45,20 +47,26 @@ class RemoteSong(SongMixin, DBObject):
         return u"<RemoteSong:{0} @ {1}>".format(self.uid, self.node_id)
 
 
-class Info(DBObject):
+class Info(NodeSideBase):
     __tablename__ = 'info'
+
     last_sent = Column(Integer, primary_key=True)
 
 
-class NodeEntry(DBObject):
+class NodeEntry(HubSideBase):
     __tablename__ = 'nodes'
+
     node_id = Column(String, primary_key=True)
     address = Column(String)
     active = Column(Boolean, default=True)
+    owner_id = Column(String, ForeignKey("users.user_id"))
+    owner = relationship('User',
+                         backref=backref('users', lazy='dynamic'))
 
 
-class HubEntry(DBObject):
+class HubEntry(NodeSideBase):
     __tablename__ = 'hubs'
+
     hub_id = Column(String, primary_key=True)
     address = Column(String)
     last_sent = Column(Integer)

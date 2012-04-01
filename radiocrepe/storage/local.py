@@ -2,7 +2,7 @@ import logging
 import os
 
 from radiocrepe.storage.base import Storage
-from radiocrepe.db import HubDB, Song, Info
+from radiocrepe.db import HubDB, Song, Info, NodeSideBase
 from radiocrepe.storage.metadata import MIME_TYPES
 import magic
 
@@ -17,7 +17,7 @@ class NodeStorage(Storage):
         self._logger = logging.getLogger('radiocrepe.storage')
 
     def initialize(self):
-        Song.metadata.create_all(self.db.engine)
+        NodeSideBase.metadata.create_all(self.db.engine)
 
     def _file_metadata(self, mtype, fpath):
         return MIME_TYPES[mtype](fpath)

@@ -1,12 +1,13 @@
-from radiocrepe.db.base import DBObject
+from radiocrepe.db.base import HubSideBase
 
 from sqlalchemy import Column, String
 
 
-class User(DBObject):
+class User(HubSideBase):
+    __schema__ = 'hub'
     __tablename__ = 'users'
     user_id = Column(String, primary_key=True)
-    identity = Column(String, primary_key=False)
+    identity = Column(String)
     secret_key = Column(String)
 
     @classmethod

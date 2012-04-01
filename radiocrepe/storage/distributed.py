@@ -1,7 +1,7 @@
 import logging
 from urllib2 import urlopen
 
-from radiocrepe.db import NodeIndex, RemoteSong
+from radiocrepe.db import NodeIndex, RemoteSong, HubSideBase
 from radiocrepe.storage.base import Storage
 from radiocrepe.network import NodeRegistry
 
@@ -17,7 +17,7 @@ class DistributedStorage(Storage):
         self.node_registry = NodeRegistry(self)
 
     def initialize(self):
-        RemoteSong.metadata.create_all(self.db.engine)
+        HubSideBase.metadata.create_all(self.db.engine)
         self.node_registry.detach_all()
 
     def mark_available(self, node_id):

@@ -5,7 +5,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 
 
-DBObject = declarative_base()
+HubSideBase = declarative_base()
+NodeSideBase = declarative_base()
+
 Session = sessionmaker()
 
 

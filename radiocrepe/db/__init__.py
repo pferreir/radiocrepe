@@ -1,4 +1,4 @@
-from radiocrepe.db.base import DBObject, DB
+from radiocrepe.db.base import HubSideBase, NodeSideBase, DB
 from radiocrepe.db.schema import Song, RemoteSong, Info, NodeEntry, HubEntry
 from radiocrepe.db.users import User
 
@@ -17,6 +17,7 @@ class NodeIndex(DB):
     @classmethod
     def get_user(cls, session, user_id):
         return User.get(session, user_id)
+
 
 class HubDB(DB):
     def __init__(self, config):
