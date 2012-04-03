@@ -21,20 +21,14 @@
   {% endraw %}
   </script>
 
-  <script id="userbox_template" type="text/x-handlebars-template">
-  {% raw %}
-  {% endraw %}
-  </script>
-
   <script type="text/javascript">
     var url = "{{url_for('index', _external=True)}}";
   </script>
 
 </head>
 <body class="shadow">
-  {% if user: %}
-    {% include 'user.html' %}
-  {% endif %}
+
+  {% include 'user.html' %}
   <h1>{{title}}</h1>
   {% include 'sys_info.html' %}
   <h2 id="now_playing">now playing</h2>

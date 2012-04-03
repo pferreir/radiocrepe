@@ -1,4 +1,26 @@
 <div id="user_box" class="shadow">
-<img class="user_picture" src="{{user['picture']}}" alt="Profile picture"/>
-<a href="#" id="user_name" class="user_name">{{user['name']}}</a>
+{% if user: %}
+  <img class="user_picture" src="{{user['picture']}}" alt="Profile picture"/>
+  <a href="#" id="user_name" class="user_name">{{user['name']}}</a>
+{% else: %}
+  <a href="{{url_for('auth.login')}}">Sign in</a>
+{% endif %}
 </div>
+
+
+<div id="userpop">
+  <h2>User options</h2>
+  <ul class="simple_list">
+    <li><a href="#" id="key_button">Service keys</a></li>
+    <li><a href="{{url_for('auth.logout')}}">Logout</a></li>
+  </ul>
+</div>
+
+<script id="key_template" type="text/x-handlebars-template">
+{% raw %}
+  <ul class="simple_list" id="key_dialog">
+    <li><span class="caption">User id</span>: <span class="quote">{{user_id}}</span></li>
+    <li><span class="caption">Secret key</span>: <span class="quote">{{secret_key}}</span></li>
+  </ul>
+{% endraw %}
+</script>

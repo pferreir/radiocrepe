@@ -19,6 +19,7 @@ from radiocrepe.web.auth import web_auth, configure_auth
 from radiocrepe.web.queue import web_queue
 from radiocrepe.web.hub import web_hub
 from radiocrepe.web.live import web_live
+from radiocrepe.web.user import web_user
 
 
 app = Flask(__name__)
@@ -26,6 +27,7 @@ app.register_blueprint(web_auth)
 app.register_blueprint(web_queue)
 app.register_blueprint(web_hub)
 app.register_blueprint(web_live)
+app.register_blueprint(web_user)
 
 
 @app.route('/song/<uid>/')

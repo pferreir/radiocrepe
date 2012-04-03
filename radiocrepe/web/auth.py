@@ -95,7 +95,7 @@ web_auth = Blueprint('auth', __name__,
                  template_folder='templates')
 
 
-@web_auth.route('/login')
+@web_auth.route('/login/')
 def login():
     return current_app.auth['app'].authorize(
         callback=url_for('auth.oauth_authorized',
@@ -103,7 +103,13 @@ def login():
         _external=True))
 
 
-@web_auth.route('/login/authorized')
+@web_auth.route('/logout/')
+def logout():
+    session.pop('user')
+    return redirect(request.referrer or url_for('index'))
+
+
+@web_auth.route('/login/authorized/')
 def oauth_authorized():
 
     remote_app = current_app.auth['app']
@@ -135,6 +141,7 @@ def oauth_authorized():
     user_id = hashlib.sha1(identity).hexdigest()
 
     user_db = User.get(db.session, user_id)
+    session['user_id'] = user_id
 
     if not user_db:
         db.session.add(User(user_id=user_id, identity=identity,

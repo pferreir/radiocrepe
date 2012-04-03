@@ -149,3 +149,37 @@ ul#sys_info li {
 ul#sys_info {
     padding: 0;
 }
+
+div#userpop {
+    display: none;
+    font-size: 12pt;
+}
+
+div#userpop h2 {
+    margin: 0 0 10px 0;
+}
+
+ul.simple_list {
+    margin: 0;
+    padding: 0;
+}
+
+ul.simple_list li {
+    padding: 5px 0 10px 0;
+    list-style-type: none;
+}
+
+ul.simple_list li .caption {
+    font-weight: bold;
+}
+
+.ui-tooltip {
+    font-size: 12pt !important;
+    max-width: 400px !important;
+}
+
+.quote {
+    border: 1px solid #ddd;
+    background: #eee;
+    padding: 2px;
+}
