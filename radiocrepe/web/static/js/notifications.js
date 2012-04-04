@@ -3,7 +3,12 @@
  */
 
 NotificationMgr = {
-    create: function(title, text) {
+
+    templates: {
+        'enqueue': Handlebars.compile($("#enqueue_notif_template").html())
+    },
+
+    create: function(title, text, template) {
         // Use the last visible jGrowl qtip as our positioning target
         var target = $('.qtip.jgrowl:visible:last');
  
@@ -11,7 +16,7 @@ NotificationMgr = {
         $(document.body).qtip({
             // Any content config you want here really.... go wild!
             content: {
-                text: text,
+                text: typeof text == "string" ? text : this.templates[template](text),
                 title: {
                     text: title,
                     button: true
@@ -111,6 +116,8 @@ NotificationMgr = {
         }
     }
 };
+
+_.bindAll(NotificationMgr, ['create']);
 
 $(document).ready(function() {
     // Utilise delegate so we don't have to rebind for every qTip!

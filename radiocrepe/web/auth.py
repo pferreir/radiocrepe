@@ -134,20 +134,26 @@ def oauth_authorized():
     db = NodeIndex(current_app.config)
 
     session['oauth_token'] = (data['access_token'], '')
-    user = current_app.auth['authenticator'].get_user_data()
 
-    session['user'] = user
+    user = current_app.auth['authenticator'].get_user_data()
     identity = current_app.auth['provider'] + ':' + str(user['id'])
     user_id = hashlib.sha1(identity).hexdigest()
 
     user_db = User.get(db.session, user_id)
+
     session['user_id'] = user_id
+    session['user'] = user
 
     if not user_db:
-        db.session.add(User(user_id=user_id, identity=identity,
-                            secret_key=os.urandom(10).encode('hex')))
+        db.add(User(user_id=user_id, identity=identity,
+                    secret_key=os.urandom(10).encode('hex')))
 
-        db.session.commit()
+    db.query(User).filter_by(user_id=user_id).update({
+        'name': user['name'],
+        'picture': user['picture']
+    })
+
+    db.session.commit()
 
     next_page = request.args.get('next')
 

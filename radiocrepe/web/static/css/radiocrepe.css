@@ -135,7 +135,7 @@ h2#now_playing {
     border-radius: 0 0 0 5px;
 }
 
-#user_box .user_picture {
+.user_picture {
     width: 32px;
     height: 32px;
 }

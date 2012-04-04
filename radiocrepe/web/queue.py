@@ -3,9 +3,10 @@ import random
 from urllib import unquote
 
 from flask import Blueprint, request, json, jsonify,\
-     current_app, Response
+     current_app, Response, session
 
 from radiocrepe.storage import DistributedStorage
+from radiocrepe.db import User
 from radiocrepe.web.util import with_storage
 from radiocrepe.web.live import broadcast
 
@@ -41,7 +42,10 @@ def enqueue(storage):
     if uid in storage:
         ts = time.time()
         queue.append((ts, uid))
-        broadcast('add', song(storage, uid), ts=ts)
+        broadcast('add', {
+            'song': song(storage, uid),
+            'user': User.get(storage.db, session['user_id']).dict()
+        }, ts=ts)
         return jsonify({'id': uid})
     else:
         return Response(jsonify(result='ERR_NO_SUCH_SONG', id=uid).data,
@@ -55,7 +59,9 @@ def _notify_start(storage):
     global playing
     try:
         playing = queue.pop(0)
-        broadcast('play', song(storage, playing[1]), ts=playing[0])
+        broadcast('play', {
+            'song': song(storage, playing[1])
+            }, ts=playing[0])
         return json.dumps(len(queue))
     except IndexError:
         return Response(jsonify(result='ERR_NO_NEXT').data,
@@ -94,7 +100,10 @@ def _search(term, storage):
         ts = time.time()
         meta = random.choice(res)
         queue.append((ts, meta['uid']))
-        broadcast('add', song(storage, meta['uid']), ts=ts)
+        broadcast('add', {
+            'song': song(storage, meta['uid']),
+            'user': User.get(storage.db, session['user_id']).dict()
+        }, ts=ts)
         meta['time'] = ts
         return jsonify(meta)
     else:

@@ -97,9 +97,9 @@ $(function() {
                 console.debug('got', result)
                 if (result) {
                     if (result.mtype == 'add') {
-                        App.add(result['data'], result['ts']);
+                        App.add(result.data, result.ts);
                     } else if (result.mtype == 'play') {
-                        App.play(result['data'], result['ts']);
+                        App.play(result.data.song, result.ts);
                     } else if (result.mtype == 'stop') {
                         App.stop();
                     } else if (result.mtype == 'attach') {
@@ -137,11 +137,13 @@ $(function() {
             $("#picture").hide();
         },
 
-        add: function(song, time_add) {
-            console.debug('adding', song);
-            NotificationMgr.create(song.artist + " - " + song.title, 'Song added');
-            song.ts = time_add;
-            collection.add(song);
+        add: function(data, time_add) {
+            console.debug('adding', data.song);
+            NotificationMgr.create(
+                data.song.artist + ' - ' + data.song.title,
+                data.user, 'enqueue');
+            data.song.ts = time_add;
+            collection.add(data.song);
         },
 
         search: function(term) {

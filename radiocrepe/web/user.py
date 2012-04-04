@@ -21,3 +21,14 @@ def user_keys():
         'user_id': user_id,
         'secret_key': user_db.secret_key
     })
+
+
+@web_user.route('/user/<user_id>/')
+def user_data(user_id):
+    db = NodeIndex(current_app.config)
+    user = User.get(db.session, user_id)
+
+    if user:
+        return jsonify(user.dict(private=False))
+    else:
+        return 'user not found', 404
