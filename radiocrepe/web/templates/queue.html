@@ -14,12 +14,17 @@
   <script src="{{url_for('static', filename='js/backbone.js')}}"></script>
   <script src="{{url_for('static', filename='js/handlebars.js')}}"></script>
 
-  <script id="song_template" type="text/x-handlebars-template">
   {% raw %}
+  <script id="song_template" type="text/x-handlebars-template">
     <span class="artist">{{ artist }}</span>
     <span class="title">{{ title }}</span>
-  {% endraw %}
   </script>
+
+  <script id="login_notif_template" type="text/x-handlebars-template">
+    <img src="{{picture}}" class="user_picture"/>
+    <span><span>{{name}}</span> logged in</span>
+  </script>
+  {% endraw %}
 
   <script type="text/javascript">
     var url = "{{url_for('index', _external=True)}}";

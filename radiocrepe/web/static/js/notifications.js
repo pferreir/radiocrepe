@@ -5,7 +5,8 @@
 NotificationMgr = {
 
     templates: {
-        'enqueue': Handlebars.compile($("#enqueue_notif_template").html())
+        'enqueue': Handlebars.compile($("#enqueue_notif_template").html()),
+        'login' : Handlebars.compile($("#login_notif_template").html())
     },
 
     create: function(title, text, template) {

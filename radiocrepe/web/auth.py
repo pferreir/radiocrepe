@@ -1,9 +1,9 @@
 from flask import Blueprint, url_for, request, session, redirect, current_app
-from flask.helpers import find_package
 from flaskext.oauth import OAuth
 
 from radiocrepe.db import NodeIndex
 from radiocrepe.db.users import User
+from radiocrepe.web.live import broadcast
 
 import os
 import hashlib
@@ -145,8 +145,9 @@ def oauth_authorized():
     session['user'] = user
 
     if not user_db:
-        db.add(User(user_id=user_id, identity=identity,
-                    secret_key=os.urandom(10).encode('hex')))
+        db.add(user_db)
+        user_db = User(user_id=user_id, identity=identity,
+                    secret_key=os.urandom(10).encode('hex'))
 
     db.query(User).filter_by(user_id=user_id).update({
         'name': user['name'],
@@ -154,6 +155,8 @@ def oauth_authorized():
     })
 
     db.session.commit()
+
+    broadcast('login', user_db.dict(private=False))
 
     next_page = request.args.get('next')
 

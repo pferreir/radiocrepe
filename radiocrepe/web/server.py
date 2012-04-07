@@ -12,7 +12,7 @@ from flask import Flask, jsonify, Response, render_template, \
 # radiocrepe
 from radiocrepe.util import load_config
 from radiocrepe.storage import DistributedStorage
-from radiocrepe.web.util import with_storage
+from radiocrepe.web.util import with_hub_db
 
 # blueprints
 from radiocrepe.web.auth import web_auth, configure_auth
@@ -31,8 +31,8 @@ app.register_blueprint(web_user)
 
 
 @app.route('/song/<uid>/')
-@with_storage(DistributedStorage)
-def song(uid, storage):
+@with_hub_db
+def song(db, storage, registry, uid):
     """
     retrieve the song from one of the storage nodes
     """
@@ -46,6 +46,10 @@ def song(uid, storage):
 
 @app.route('/artist/<name>/')
 def artist_info(name):
+    """
+    Return a JSON structure with the information about an artists.
+    The information is fetched directly from last.fm.
+    """
     if app.config.get('lastfm_key'):
         params = {
             'method': 'artist.getinfo',
@@ -62,11 +66,14 @@ def artist_info(name):
 
 
 @app.route('/')
-@with_storage(DistributedStorage)
-def index(storage):
+@with_hub_db
+def index(db, storage, registry):
+    """
+    Home page
+    """
     return render_template('queue.html', title=app.config['title'],
-                           user=session.get('user'), storage_data=storage.stats,
-                           users_data=storage.db.user_stats)
+            user=session.get('user'), storage_data=storage.stats,
+            users_data=storage.db.user_stats)
 
 
 def main(args, root_logger, handler):

@@ -4,8 +4,7 @@ from Queue import Queue, Empty
 from flask import Blueprint, request, json
 from gevent import sleep, greenlet
 
-from radiocrepe.web.util import with_storage
-from radiocrepe.storage import DistributedStorage
+from radiocrepe.web.util import with_hub_db
 
 web_live = Blueprint('live', __name__,
                      template_folder='templates')
@@ -21,8 +20,12 @@ def broadcast(mtype, data, ts=None):
 
 
 @web_live.route('/updates/')
-@with_storage(DistributedStorage)
-def updates(storage):
+@with_hub_db
+def updates(db, storage, registry):
+    """
+    Websockets - read-write loop
+    Here messages are broadcasted to all clients
+    """
     global messages
     guid = id(greenlet.getcurrent())
 

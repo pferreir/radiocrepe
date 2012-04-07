@@ -3,9 +3,8 @@ import os
 
 from flask import Blueprint, request, json, current_app
 
-from radiocrepe.storage import DistributedStorage
 from radiocrepe.web.live import broadcast
-from radiocrepe.web.util import with_digest_auth, with_node_registry, with_storage
+from radiocrepe.web.util import with_digest_auth, with_hub_db
 from radiocrepe.db import User
 
 web_hub = Blueprint('hub', __name__,
@@ -33,10 +32,9 @@ credential_provider = CredentialProvider()
 
 
 @web_hub.route('/node/upload/', methods=['POST'])
-@with_node_registry
-@with_storage(DistributedStorage)
+@with_hub_db
 @with_digest_auth(credential_provider)
-def node_recv(storage, registry, user):
+def node_recv(db, storage, registry, user):
     """
     Receive metadata from the nodes
     """
@@ -51,9 +49,9 @@ def node_recv(storage, registry, user):
 
 
 @web_hub.route('/node/detach/', methods=['POST'])
-@with_node_registry
+@with_hub_db
 @with_digest_auth(credential_provider)
-def node_detach(registry, user):
+def node_detach(db, storage, registry, user):
     """
     Detach from a node
     """
@@ -69,9 +67,9 @@ def node_detach(registry, user):
 
 
 @web_hub.route('/node/attach/', methods=['POST'])
-@with_node_registry
+@with_hub_db
 @with_digest_auth(credential_provider)
-def node_attach(registry, user):
+def node_attach(db, storage, registry, user):
     """
     Attach to a node
     """
@@ -86,7 +84,7 @@ def node_attach(registry, user):
 
 
 @web_hub.route('/node/test/', methods=['POST'])
-@with_node_registry
+@with_hub_db
 @with_digest_auth(credential_provider)
-def node_test(registry, user):
+def node_test(db, storage, registry, user):
     return str(request.form)

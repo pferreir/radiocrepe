@@ -7,7 +7,7 @@ from flask import Blueprint, request, json, jsonify,\
 
 from radiocrepe.storage import DistributedStorage
 from radiocrepe.db import User
-from radiocrepe.web.util import with_storage
+from radiocrepe.web.util import with_hub_db
 from radiocrepe.web.live import broadcast
 
 web_queue = Blueprint('queue', __name__,
@@ -23,8 +23,8 @@ def song(storage, uid):
 
 
 @web_queue.route('/playing/')
-@with_storage(DistributedStorage)
-def _playing(storage):
+@with_hub_db
+def _playing(db, storage, registry):
     if playing:
         storage = DistributedStorage.bind(current_app.config)
         meta = storage.get(playing[1], None)
@@ -36,8 +36,8 @@ def _playing(storage):
 
 
 @web_queue.route('/enqueue/', methods=['POST'])
-@with_storage(DistributedStorage)
-def enqueue(storage):
+@with_hub_db
+def enqueue(db, storage, registry):
     uid = request.form.get('uid')
     if uid in storage:
         ts = time.time()
@@ -54,8 +54,8 @@ def enqueue(storage):
 
 
 @web_queue.route('/notify/start/', methods=['POST'])
-@with_storage(DistributedStorage)
-def _notify_start(storage):
+@with_hub_db
+def _notify_start(db, storage, registry):
     global playing
     try:
         playing = queue.pop(0)
@@ -69,8 +69,8 @@ def _notify_start(storage):
 
 
 @web_queue.route('/notify/stop/', methods=['POST'])
-@with_storage(DistributedStorage)
-def _notify_stop(storage):
+@with_hub_db
+def _notify_stop(db, storage, registry):
     global playing
     broadcast('stop', song(storage, playing[1]), ts=playing[0])
     playing = None
@@ -78,8 +78,8 @@ def _notify_stop(storage):
 
 
 @web_queue.route('/queue/')
-@with_storage(DistributedStorage)
-def _queue(storage):
+@with_hub_db
+def _queue(db, storage, registry):
     res = []
     for ts, uid in queue:
         elem = storage.get(uid, None)
@@ -90,8 +90,8 @@ def _queue(storage):
 
 
 @web_queue.route('/play/<term>/', methods=['POST'])
-@with_storage(DistributedStorage)
-def _search(term, storage):
+@with_hub_db
+def _search(db, storage, registry, term):
     term = unquote(term)
 
     res = storage.search(term)

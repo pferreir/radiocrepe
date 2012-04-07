@@ -103,10 +103,13 @@ $(function() {
                     } else if (result.mtype == 'stop') {
                         App.stop();
                     } else if (result.mtype == 'attach') {
-                        NotificationMgr.create(result['data']['node_id'], 'storage attached');
+                        NotificationMgr.create(result.data.node_id, 'storage attached');
                     } else if (result.mtype == 'detach') {
-                        NotificationMgr.create(result['data']['node_id'], 'storage detached');
+                        NotificationMgr.create(result.data.node_id, 'storage detached');
+                    } else if (result.mtype == 'login') {
+                        NotificationMgr.create('', result.data, 'login')
                     }
+
                 }
             };
         },

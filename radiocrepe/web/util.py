@@ -10,22 +10,11 @@ from radiocrepe.storage import DistributedStorage
 nonce_registry = {}
 
 
-def with_storage(storage):
-    def _wrapper(f):
-        @wraps(f)
-        def _wrapped(*args, **kwargs):
-            strg = storage.bind(current_app.config)
-            return f(*args, storage=strg, **kwargs)
-        return _wrapped
-    return _wrapper
-
-
-def with_node_registry(f):
+def with_hub_db(f):
     @wraps(f)
     def _wrapper(*args, **kwargs):
-        # allow chaining with `with_storage`
-        strg = kwargs.get('storage', DistributedStorage.bind(current_app.config))
-        return f(*args, registry=strg.node_registry, **kwargs)
+        strg = DistributedStorage.bind(current_app.config)
+        return f(strg.db, strg, strg.node_registry, *args, **kwargs)
     return _wrapper
 
 
