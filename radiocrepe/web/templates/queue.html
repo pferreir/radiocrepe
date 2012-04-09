@@ -7,12 +7,9 @@
   <link rel="stylesheet" href="{{url_for('static', filename='css/jquery.qtip.css')}}" />
   <link href='http://fonts.googleapis.com/css?family=Share' rel='stylesheet' type='text/css'>
 
-
-  <script src="{{url_for('static', filename='js/jquery.js')}}"></script>
-  <script src="{{url_for('static', filename='js/jquery.qtip.js')}}"></script>
-  <script src="{{url_for('static', filename='js/underscore-min.js')}}"></script>
-  <script src="{{url_for('static', filename='js/backbone.js')}}"></script>
-  <script src="{{url_for('static', filename='js/handlebars.js')}}"></script>
+  {% assets "js_libs" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+  {% endassets %}
 
   {% raw %}
   <script id="song_template" type="text/x-handlebars-template">
@@ -48,8 +45,8 @@
     <input type="text" id="term"/>
     <button id="play">Play!</button>
   </div>
-  <script src="{{url_for('static', filename='js/queue.js')}}"></script>
-  <script src="{{url_for('static', filename='js/user_profile.js')}}"></script>
-  <script src="{{url_for('static', filename='js/notifications.js')}}"></script>
+  {% assets "js_app" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+  {% endassets %}
 </body>
 </html>

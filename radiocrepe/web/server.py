@@ -8,6 +8,7 @@ from geventwebsocket.handler import WebSocketHandler
 from gevent.pywsgi import WSGIServer
 from flask import Flask, jsonify, Response, render_template, \
      redirect, session
+from flaskext.assets import Environment, Bundle
 
 # radiocrepe
 from radiocrepe.util import load_config
@@ -28,6 +29,19 @@ app.register_blueprint(web_queue)
 app.register_blueprint(web_hub)
 app.register_blueprint(web_live)
 app.register_blueprint(web_user)
+
+
+assets = Environment(app)
+
+lib_bundle = Bundle('js/jquery.js', 'js/jquery.qtip.js', 'js/underscore.js',
+                    'js/backbone.js', 'js/handlebars.js',
+                    filters='jsmin', output='js/gen/libs.packed.js')
+
+rc_bundle = Bundle('js/queue.js', 'js/user_profile.js', 'js/notifications.js',
+                   filters='jsmin', output='js/gen/radiocrepe.packed.js')
+
+assets.register('js_libs', lib_bundle)
+assets.register('js_app', rc_bundle)
 
 
 @app.route('/song/<uid>/')
@@ -89,6 +103,7 @@ def main(args, root_logger, handler):
         app.logger.addHandler(handler)
     else:
         app.debug = True
+        assets.debug = True
 
     if not config.get('secret_key'):
         raise Exception('Please set a secret key!')
