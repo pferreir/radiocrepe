@@ -41,10 +41,12 @@
   <h2 id="queued_up\">queued up</h2>
   <ul id="song_list">
   </ul>
+  {% if user: %}
   <div id="add_box">
     <input type="text" id="term"/>
-    <button id="play">Play!</button>
+    <button id="play">I feel lucky!</button>
   </div>
+  {% endif %}
   {% assets "js_app" %}
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
   {% endassets %}

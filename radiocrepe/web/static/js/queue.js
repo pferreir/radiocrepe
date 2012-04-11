@@ -128,7 +128,7 @@ $(function() {
             console.debug('playing', song);
             $("#now").html(song_template(song))
             _(collection.models).each(function(item){
-                if (item.get('ts') <= time_add) {
+                if (item.get('ts_add') <= time_add) {
                     collection.remove(item);
                 }
             });
@@ -141,11 +141,11 @@ $(function() {
         },
 
         add: function(data, time_add) {
-            console.debug('adding', data.song);
             NotificationMgr.create(
                 data.song.artist + ' - ' + data.song.title,
                 data.user, 'enqueue');
-            data.song.ts = time_add;
+            data.song.ts_add = time_add;
+            console.debug('adding', data.song);
             collection.add(data.song);
         },
 
