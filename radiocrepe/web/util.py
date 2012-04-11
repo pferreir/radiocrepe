@@ -40,10 +40,10 @@ class with_digest_auth(object):
     def __call__(self, f):
         @wraps(f)
         def _wrapper(*args, **kwargs):
-            if 'registry' not in kwargs:
+            if len(args) < 3:
                 raise Exception("'with_digest_auth' requires a 'registry'")
             else:
-                self.cred_provider.set_session(kwargs['registry'].db.session)
+                self.cred_provider.set_session(args[2].db.session)
             auth_header = request.headers.get('Authorization')
 
             if not auth_header or not auth_header.startswith("Digest"):

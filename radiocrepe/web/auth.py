@@ -145,9 +145,9 @@ def oauth_authorized():
     session['user'] = user
 
     if not user_db:
-        db.add(user_db)
         user_db = User(user_id=user_id, identity=identity,
                     secret_key=os.urandom(10).encode('hex'))
+        db.add(user_db)
 
     db.query(User).filter_by(user_id=user_id).update({
         'name': user['name'],
