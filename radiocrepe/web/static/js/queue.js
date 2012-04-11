@@ -99,7 +99,7 @@ $(function() {
                     if (result.mtype == 'add') {
                         App.add(result.data, result.ts);
                     } else if (result.mtype == 'play') {
-                        App.play(result.data.song, result.ts);
+                        App.play(result.data.song, result.ts, result.data.user);
                     } else if (result.mtype == 'stop') {
                         App.stop();
                     } else if (result.mtype == 'attach') {
@@ -124,8 +124,10 @@ $(function() {
                         }
                     }});
         },
-        play: function (song, time_add) {
-            console.debug('playing', song);
+        play: function (song, time_add, added_by) {
+            if (added_by !== undefined) {
+                song.added_by = added_by;
+            }
             $("#now").html(song_template(song))
             _(collection.models).each(function(item){
                 if (item.get('ts_add') <= time_add) {
@@ -133,6 +135,7 @@ $(function() {
                 }
             });
             update_artist_info(song.artist);
+            console.debug('playing', song);
         },
 
         stop: function() {
@@ -145,6 +148,7 @@ $(function() {
                 data.song.artist + ' - ' + data.song.title,
                 data.user, 'enqueue');
             data.song.ts_add = time_add;
+            data.song.added_by = data.user;
             console.debug('adding', data.song);
             collection.add(data.song);
         },

@@ -27,9 +27,9 @@ class Player(object):
 
         while not self._exit:
             for song in self._client.iter_songs():
-                if song and song['time_add'] != last_ts:
+                if song and song['ts_add'] != last_ts:
                     self._enqueue(song)
-                    last_ts = song['time_add']
+                    last_ts = song['ts_add']
 
                     if not self._playing:
                         self._play_index(self._index)

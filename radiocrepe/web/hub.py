@@ -81,10 +81,3 @@ def node_attach(db, storage, registry, user):
         'owner': user.dict()
         })
     return ''
-
-
-@web_hub.route('/node/test/', methods=['POST'])
-@with_hub_db
-@with_digest_auth(credential_provider)
-def node_test(db, storage, registry, user):
-    return str(request.form)

@@ -29,6 +29,7 @@ def _playing(db, storage, registry):
         storage = DistributedStorage.bind(current_app.config)
         meta = storage.get(playing[1], None)
         meta['time_add'] = playing[0]
+        meta['added_by'] = User.get(db, playing[2]).dict()
     else:
         meta = None
     return Response(json.dumps(meta),
@@ -41,10 +42,11 @@ def enqueue(db, storage, registry):
     uid = request.form.get('uid')
     if uid in storage:
         ts = time.time()
-        queue.append((ts, uid))
+        user_id = session['user_id']
+        queue.append((ts, uid, user_id))
         broadcast('add', {
             'song': song(storage, uid),
-            'user': User.get(storage.db, session['user_id']).dict()
+            'user': User.get(db, user_id).dict()
         }, ts=ts)
         return jsonify({'id': uid})
     else:
@@ -59,9 +61,11 @@ def _notify_start(db, storage, registry):
     global playing
     try:
         playing = queue.pop(0)
+        ts, uid, user_id = playing
         broadcast('play', {
-            'song': song(storage, playing[1])
-            }, ts=playing[0])
+            'song': song(storage, uid),
+            'user': User.get(db, user_id).dict()
+            }, ts=ts)
         return json.dumps(len(queue))
     except IndexError:
         return Response(jsonify(result='ERR_NO_NEXT').data,
@@ -81,10 +85,11 @@ def _notify_stop(db, storage, registry):
 @with_hub_db
 def _queue(db, storage, registry):
     res = []
-    for ts, uid in queue:
+    for ts, uid, user_id in queue:
         elem = storage.get(uid, None)
         elem['uid'] = uid
-        elem['time_add'] = ts
+        elem['ts_add'] = ts
+        elem['added_by'] = User.get(db, user_id).dict()
         res.append(elem)
     return json.dumps(res)
 
@@ -99,7 +104,7 @@ def _search(db, storage, registry, term):
     if res:
         ts = time.time()
         meta = random.choice(res)
-        queue.append((ts, meta['uid']))
+        queue.append((ts, meta['uid'], session['user_id']))
         broadcast('add', {
             'song': song(storage, meta['uid']),
             'user': User.get(storage.db, session['user_id']).dict()

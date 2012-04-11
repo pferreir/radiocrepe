@@ -57,6 +57,8 @@ ul#song_list li {
     box-shadow: 0px 1px 2px 1px #fff;
     color: #666;
 
+    line-height: 25px;
+
 }
 
 .download_link {
@@ -182,4 +184,15 @@ ul.simple_list li .caption {
     border: 1px solid #ddd;
     background: #eee;
     padding: 2px;
+}
+
+span.user_img .user_picture {
+    width: 25px;
+    height: 25px;
+    float: right;
+}
+
+div#now_playing_box span.user_img .user_picture {
+    margin-top: 10px;
+    float: left;
 }

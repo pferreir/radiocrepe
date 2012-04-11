@@ -68,7 +68,7 @@ class Client(object):
             if queue:
                 for meta in queue:
                     if not self._last or \
-                      meta['time_add'] > self._last['time_add']:
+                      meta['ts_add'] > self._last['ts_add']:
                         print 'enqueueing', meta
                         yield meta
                         self._last = meta
