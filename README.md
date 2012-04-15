@@ -57,3 +57,4 @@ This app bundles the following 3rd party components:
  * [underscore.js](http://documentcloud.github.com/underscore/) by DocumentCloud;
  * [jQuery](http://jquery.com) by John Resig;
  * [handlebars.js](http://handlebarsjs.com/) by Yehuda Katz;
+ * [qTip2](http://craigsworks.com/projects/qtip2/) by Craig Thompson;
