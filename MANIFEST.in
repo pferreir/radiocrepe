@@ -1,4 +1,5 @@
 recursive-include radiocrepe *.py
-recursive-include radiocrepe/templates *.html
-recursive-include radiocrepe/static/js *.js
-recursive-include radiocrepe/static/css *.css
+recursive-include radiocrepe/web/templates *.html
+recursive-include radiocrepe/web/static/js *.js
+recursive-include radiocrepe/web/static/css *.css
+recursive-include radiocrepe/web/static/img *.png
