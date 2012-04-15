@@ -1,5 +1,6 @@
 $(function() {
     var song_template = Handlebars.compile($("#song_template").html());
+    var song_template_now = Handlebars.compile($("#song_template_now").html());
     var prev_result = {time: 0};
 
     var Item = Backbone.Model.extend({
@@ -128,7 +129,7 @@ $(function() {
             if (added_by !== undefined) {
                 song.added_by = added_by;
             }
-            $("#now").html(song_template(song))
+            $("#now").html(song_template_now(song))
             _(collection.models).each(function(item){
                 if (item.get('ts_add') <= time_add) {
                     collection.remove(item);

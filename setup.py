@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "radiocrepe",
-    version = "0.0.1",
+    version = "0.1",
     author = "Pedro Ferreira",
     author_email = "ilzogoiby@gmail.com",
     description = ("An office jukebox"),
@@ -18,7 +18,7 @@ setup(
         'radiocrepe': ['*.sql']
     },
     install_requires=['mutagen', 'Flask', 'python-magic', 'sqlalchemy',
-                      'gevent', 'gevent-websocket', 'flask-oauth', 'httplib2',
+                      'gevent', 'gevent-websocket', 'flask-oauth', 'requests',
                       'flask-assets'],
     entry_points={'console_scripts': "radiocrepe=radiocrepe.main:main"},
     dependency_links=[],

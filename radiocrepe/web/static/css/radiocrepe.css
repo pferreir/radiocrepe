@@ -70,15 +70,18 @@ ul#song_list li .download_link {
 }
 
 ul#song_list li .title {
+    vertical-align: middle;
     display: inline-block;
     max-width: 230px;
-    margin-left: 10px;
+    margin-left: 5px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
 ul#song_list li .artist {
+    margin-left: 10px;
+    vertical-align: middle;
     font-weight: bold;
 }
 
@@ -189,10 +192,9 @@ ul.simple_list li .caption {
 span.user_img .user_picture {
     width: 25px;
     height: 25px;
-    float: right;
+    vertical-align: middle;
 }
 
 div#now_playing_box span.user_img .user_picture {
     margin-top: 10px;
-    float: left;
 }
