@@ -14,18 +14,53 @@ $(function() {
     var ItemView = Backbone.View.extend({
         tagName: 'li',
         initialize: function() {
-            _.bindAll(this, 'render', 'remove');
+            _.bindAll(this, 'render', 'remove', 'update', 'vote_up',
+                     'vote_undo');
             this.model.bind('remove', this.remove);
+            this.model.bind('change', this.update);
         },
         render: function() {
-            $(this.el).html(song_template(this.model.toJSON()))
+            var data = this.model.toJSON();
+            data.img_path = url_img;
+            data.logged_user = logged_user;
+            $(this.el).html(song_template(data))
             return this;
         },
         remove: function() {
             $(this.el).fadeOut(function() {
                 $(this).remove();
             });
+        },
+        events: {
+            "click div.up_arrow:not(.active)": "vote_up",
+            "click div.up_arrow.active": "vote_undo"
+        },
+        update: function() {
+            this.render();
+        },
+        vote_up: function() {
+            var self = this;
+            var $arrow = $('div.up_arrow', this.el);
+            $.ajax({url: '/queue/' + this.model.get('uid') + '_' +
+                    this.model.get('ts_add') + '/vote_up/',
+                    type: 'POST',
+                    success: function(result) {
+                        $arrow.addClass('active');
+                        self.model.set('self_vote', true);
+                    }});
+        },
+        vote_undo: function() {
+            var self = this;
+            var $arrow = $('div.up_arrow', this.el);
+            $.ajax({url: '/queue/' + this.model.get('uid') + '_' +
+                    this.model.get('ts_add') + '/vote_undo/',
+                    type: 'POST',
+                    success: function(result) {
+                        $arrow.removeClass('active');
+                        self.model.set('self_vote', false);
+                    }});
         }
+
     });
 
     var QueueView = Backbone.View.extend({
@@ -36,7 +71,6 @@ $(function() {
             this.collection.bind('refresh', this.render);
             this.collection.bind('add', this.addItem);
             this.collection.bind('remove', this.removeItem);
-
             this.collection.fetch({add: true});
        },
         addItem: function(item) {
@@ -83,6 +117,7 @@ $(function() {
             $('#play').click(function() {
                 App.search($('#term').val());
             });
+            
             $('#term').keypress(function(e){
                 if(e.which == 13){
                     App.search($('#term').val());
@@ -109,8 +144,12 @@ $(function() {
                         NotificationMgr.create(result.data.node_id, 'storage detached');
                     } else if (result.mtype == 'login') {
                         NotificationMgr.create('', result.data, 'login')
+                    } else if (result.mtype == 'vote_up') {
+                        App.vote_up(result.data);
+                    }  else if (result.mtype == 'vote_undo') {
+                        App.vote_undo(result.data);
                     }
-
+ 
                 }
             };
         },
@@ -150,8 +189,36 @@ $(function() {
                 data.user, 'enqueue');
             data.song.ts_add = time_add;
             data.song.added_by = data.user;
+            data.song.num_votes = data.num_votes;
+            data.song.self_vote = data.self_vote;
             console.debug('adding', data.song);
             collection.add(data.song);
+        },
+
+        vote_up: function(data) {
+            var res = collection.where({
+                uid: data.uid,
+                ts_add: data.ts_add
+            });
+
+            if (res) {
+                res[0].set('num_votes', res[0].get('num_votes') + 1);
+            } else {
+                console.error('no such song found', data);
+            }
+        },
+
+        vote_undo: function(data) {
+            var res = collection.where({
+                uid: data.uid,
+                ts_add: data.ts_add
+            });
+
+            if (res) {
+                res[0].set('num_votes', res[0].get('num_votes') - 1);
+            } else {
+                console.error('no such song found', data);
+            }
         },
 
         search: function(term) {

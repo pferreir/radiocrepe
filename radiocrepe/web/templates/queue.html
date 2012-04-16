@@ -16,6 +16,16 @@
     <span class="user_img"><img class="user_picture" src="{{ added_by.picture }}" alt="{{ added_by.name }}" title="{{ added_by.name }}" /></span>
     <span class="artist">{{ artist }}</span>
     <span class="title">{{ title }}</span>
+    <div class="votes">
+      {{#if logged_user}}
+        <div class="num_votes">{{ num_votes }}</div>
+        {{#if self_vote}}
+          <div class="up_arrow active" title="undo vote"></div>
+        {{else}}
+          <div class="up_arrow" title="vote up"></div>
+        {{/if}}
+      {{/if}}
+    </div>
   </script>
 
   <script id="song_template_now" type="text/x-handlebars-template">
@@ -28,10 +38,13 @@
     <img src="{{picture}}" class="user_picture"/>
     <span><span>{{name}}</span> logged in</span>
   </script>
+
   {% endraw %}
 
   <script type="text/javascript">
     var url = "{{url_for('index', _external=True)}}";
+    var url_img = "{{url_for('static', filename='img/')}}";
+    var logged_user = {{user | tojson|safe}};
   </script>
 
 </head>

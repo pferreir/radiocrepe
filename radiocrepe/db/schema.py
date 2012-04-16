@@ -18,7 +18,7 @@ class SongMixin(object):
     title = Column(String)
     album = Column(String)
 
-    __mapper_args__= {'always_refresh': True}
+    __mapper_args__ = {'always_refresh': True}
 
     def dict(row):
         d = {}
@@ -26,6 +26,14 @@ class SongMixin(object):
             d[columnName] = getattr(row, columnName)
 
         return d
+
+
+class Vote(HubSideBase):
+    __tablename__ = 'votes'
+
+    user_id = Column(String, ForeignKey("users.user_id"), primary_key=True)
+    song_id = Column(String, ForeignKey("song_index.uid"), primary_key=True)
+    timestamp = Column(Integer, primary_key=True)
 
 
 class Song(SongMixin, NodeSideBase):

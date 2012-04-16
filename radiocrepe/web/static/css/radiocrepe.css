@@ -198,3 +198,27 @@ span.user_img .user_picture {
 div#now_playing_box span.user_img .user_picture {
     margin-top: 10px;
 }
+
+div.votes div.up_arrow {
+    width: 16px;
+    height: 16px;
+    float: right;
+    cursor: pointer;
+    margin-top: 5px;
+    background: url('/static/img/up.png');
+}
+
+div.votes div.up_arrow.active {
+    background-position: 16px 0;
+}
+
+div.votes {
+    float: right;
+}
+
+div.votes div.num_votes{
+    float: right;
+    padding-top: 3px;
+    margin-left: 5px;
+    margin-right: 5px;
+}
