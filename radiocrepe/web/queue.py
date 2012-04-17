@@ -35,14 +35,13 @@ def _playing(db, storage, registry):
                     mimetype='application/json')
 
 
-@web_queue.route('/enqueue/', methods=['POST'])
+@web_queue.route('/enqueue/<uid>/', methods=['POST'])
 @with_hub_db
-def enqueue(db, storage, registry):
-    uid = request.form.get('uid')
+def enqueue(db, storage, registry, uid):
     if uid in storage:
         ts = int(time.time())
         user_id = session['user_id']
-        db.session.add(QueueEntry(timestamps=ts, user_id=user_id, song_id=uid))
+        db.session.add(QueueEntry(timestamp=ts, user_id=user_id, song_id=uid))
         db.session.commit()
         broadcast('add', {
             'song': song(storage, uid),
@@ -113,11 +112,13 @@ def _queue(db, storage, registry):
 def _search(db, storage, registry, term):
     term = unquote(term)
 
-    res = storage.search(term)
+    res = list(storage.search(term, limit=10))
 
-    if res:
+    if len(res) > 1:
+        return json.dumps(res)
+    elif len(res) == 1:
         ts = int(time.time())
-        meta = random.choice(res)
+        meta = res[0]
         db.session.add(QueueEntry(timestamp=ts, user_id=session['user_id'],
                                   song_id=meta['uid']))
         db.session.commit()

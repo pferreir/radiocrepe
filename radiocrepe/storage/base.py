@@ -32,16 +32,18 @@ class Storage(object):
         self.db.add(obj)
         self.db.commit()
 
-    def search(self, term):
+    def search(self, term, limit=None):
         key = "%%%s%%" % term
-        return list(r.dict() for r in self.db.query(
-            self._songClass).filter(or_(self._songClass.artist.like(key),
-                                        self._songClass.title.like(key)),
-                                    self._songClass.available == True))
+        for r in self.db.query(
+                self._songClass).filter(
+                    or_(self._songClass.artist.like(key),
+                        self._songClass.title.like(key)),
+                        self._songClass.available == True).limit(limit):
+            yield r.dict()
 
-    def get(self, uid, default=None):
+    def get(self, uid, default=None, private=False):
         first = self.db.query(self._songClass).filter_by(uid=uid).first()
-        return first.dict() if first else default
+        return first.dict(private=private) if first else default
 
     def __contains__(self, uid):
         return self.get(uid) != None

@@ -1,5 +1,6 @@
 $(function() {
     var song_template = Handlebars.compile($("#song_template").html());
+    var song_result = Handlebars.compile($("#song_result").html());
     var song_template_now = Handlebars.compile($("#song_template_now").html());
     var prev_result = {time: 0};
 
@@ -117,7 +118,7 @@ $(function() {
             $('#play').click(function() {
                 App.search($('#term').val());
             });
-            
+
             $('#term').keypress(function(e){
                 if(e.which == 13){
                     App.search($('#term').val());
@@ -149,7 +150,7 @@ $(function() {
                     }  else if (result.mtype == 'vote_undo') {
                         App.vote_undo(result.data);
                     }
- 
+
                 }
             };
         },
@@ -223,12 +224,68 @@ $(function() {
 
         search: function(term) {
             $.ajax({url: '/play/' + encodeURI(term) + '/',
+                    dataType: 'json',
                     type: 'POST',
                     success: function(result) {
                         $('#term').val('').focus();
+                        if ($.isArray(result)) {
+                            App.show_chooser(result);
+                        }
                     },
                     error: function() {
                         alert('Sorry, nothing found');
+                        $('#term').focus()
+                    }});
+        },
+
+        show_chooser: function(songs) {
+            $('#term').qtip({
+                content: {
+                    text: function() {
+                        var tip = this;
+                        var list = $('<ul id="result_list"></ul>')
+                        _.each(songs, function(song) {
+                            list.append(song_result(song));
+                        });
+                        list.on('click', 'a', function() {
+                            App.enqueue($(this).data('uid'));
+                            tip.qtip('destroy');
+                            return false;
+                        });
+                        return list;
+                    },
+                    title: {
+                        text: 'Search results',
+                        button: true
+                    }
+                },
+                position: {
+                    my: 'center',
+                    at: 'center',
+                    target: $(window)
+                },
+                show: {
+                    event: null,
+                    solo: true,
+                    modal: true,
+                    ready: true
+                },
+                style: {
+                    width: '400px',
+                    classes: 'ui-tooltip-light ui-tooltip-rounded'
+                }
+            });
+
+        },
+
+        enqueue: function(uid) {
+            $.ajax({url: '/enqueue/' + encodeURI(uid) + '/',
+                    dataType: 'json',
+                    type: 'POST',
+                    success: function(result) {
+                    },
+                    error: function() {
+                        alert('Something wrong while adding song to the queue');
                         $('#term').focus()
                     }});
         }

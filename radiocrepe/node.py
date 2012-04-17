@@ -25,7 +25,7 @@ def auth_request(config):
 @app.route('/song/<uid>/')
 def song(uid):
     storage = NodeStorage.bind(app.config)
-    meta = storage.get(uid, None)
+    meta = storage.get(uid, None, private=True)
     if meta is None:
         return 'song not found', 404
     else:

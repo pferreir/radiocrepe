@@ -50,7 +50,7 @@ def song(db, storage, registry, uid):
     """
     retrieve the song from one of the storage nodes
     """
-    meta = storage.get(uid, None)
+    meta = storage.get(uid, None, private=True)
     if meta is None:
         return 'song not found', 404
     else:

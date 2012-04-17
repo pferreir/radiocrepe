@@ -18,14 +18,19 @@ class SongMixin(object):
     title = Column(String)
     album = Column(String)
 
+    __public__ = ['uid', 'title', 'artist', 'album', 'mime']
     __mapper_args__ = {'always_refresh': True}
 
-    def dict(row):
+    def dict(self, private=False):
         d = {}
-        for columnName in row.__table__.columns.keys():
-            d[columnName] = getattr(row, columnName)
+        for columnName in self.__table__.columns.keys():
+            d[columnName] = getattr(self, columnName)
 
-        return d
+        if private:
+            return d
+        else:
+            return dict((k, v) for (k, v) in d.iteritems() \
+                        if k in self.__public__)
 
 
 class Vote(HubSideBase):

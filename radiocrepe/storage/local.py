@@ -53,7 +53,7 @@ class NodeStorage(Storage):
             yield song
 
     def file(self, uid):
-        meta = self.get(uid)
+        meta = self.get(uid, private=True)
         return open(os.path.join(self._config['content_dir'], meta['fpath']))
 
     def update(self):
