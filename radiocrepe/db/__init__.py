@@ -1,5 +1,6 @@
 from radiocrepe.db.base import HubSideBase, NodeSideBase, DB
-from radiocrepe.db.schema import Song, RemoteSong, Info, NodeEntry, HubEntry, Vote
+from radiocrepe.db.schema import Song, RemoteSong, Info, \
+     NodeEntry, HubEntry, Vote, QueueEntry
 from radiocrepe.db.users import User
 
 

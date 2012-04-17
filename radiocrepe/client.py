@@ -28,9 +28,8 @@ class HTTPClient(object):
     def notify_start(self):
         try:
             with closing(urlopen(self._surl + '/notify/start/', '')) as d:
-                data = json.load(d)
                 success = d.code == 200
-            return data
+            return True
         except HTTPError:
             return False
 

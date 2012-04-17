@@ -36,6 +36,15 @@ class Vote(HubSideBase):
     timestamp = Column(Integer, primary_key=True)
 
 
+class QueueEntry(HubSideBase):
+    __tablename__ = 'queue'
+
+    user_id = Column(String, ForeignKey("users.user_id"), primary_key=True)
+    song_id = Column(String, ForeignKey("song_index.uid"), primary_key=True)
+    timestamp = Column(Integer, primary_key=True)
+    waiting = Column(Boolean, default=True)
+
+
 class Song(SongMixin, NodeSideBase):
     __tablename__ = 'songs'
 

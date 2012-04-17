@@ -6,7 +6,7 @@ from flask import Blueprint, request, json, jsonify,\
      current_app, Response, session
 
 from radiocrepe.storage import DistributedStorage
-from radiocrepe.db import User, Vote
+from radiocrepe.db import User, Vote, QueueEntry
 from radiocrepe.web.util import with_hub_db
 from radiocrepe.web.live import broadcast
 
@@ -15,7 +15,6 @@ web_queue = Blueprint('queue', __name__,
 
 
 playing = None
-queue = []
 
 
 def song(storage, uid):
@@ -27,9 +26,9 @@ def song(storage, uid):
 def _playing(db, storage, registry):
     if playing:
         storage = DistributedStorage.bind(current_app.config)
-        meta = storage.get(playing[1], None)
-        meta['time_add'] = playing[0]
-        meta['added_by'] = User.get(db, playing[2]).dict()
+        meta = storage.get(playing.song_id, None)
+        meta['time_add'] = playing.timestamp
+        meta['added_by'] = User.get(db, playing.user_id).dict()
     else:
         meta = None
     return Response(json.dumps(meta),
@@ -43,7 +42,8 @@ def enqueue(db, storage, registry):
     if uid in storage:
         ts = int(time.time())
         user_id = session['user_id']
-        queue.append((ts, uid, user_id))
+        db.session.add(QueueEntry(timestamps=ts, user_id=user_id, song_id=uid))
+        db.session.commit()
         broadcast('add', {
             'song': song(storage, uid),
             'user': User.get(db, user_id).dict(),
@@ -61,15 +61,19 @@ def enqueue(db, storage, registry):
 @with_hub_db
 def _notify_start(db, storage, registry):
     global playing
-    try:
-        playing = queue.pop(0)
-        ts, uid, user_id = playing
+    playing = db.session.query(QueueEntry).filter_by(waiting=True).\
+      order_by(QueueEntry.timestamp).first()
+
+    if playing:
+        playing.waiting = False
+        db.session.commit()
+
         broadcast('play', {
-            'song': song(storage, uid),
-            'user': User.get(db, user_id).dict()
-            }, ts=ts)
-        return json.dumps(len(queue))
-    except IndexError:
+            'song': song(storage, playing.song_id),
+            'user': User.get(db, playing.user_id).dict()
+            }, ts=playing.timestamp)
+        return ''
+    else:
         return Response(jsonify(result='ERR_NO_NEXT').data,
                         mimetype='application/json', status=404)
 
@@ -78,7 +82,7 @@ def _notify_start(db, storage, registry):
 @with_hub_db
 def _notify_stop(db, storage, registry):
     global playing
-    broadcast('stop', song(storage, playing[1]), ts=playing[0])
+    broadcast('stop', song(storage, playing.uid), ts=playing.timestamp)
     playing = None
     return ''
 
@@ -87,16 +91,19 @@ def _notify_stop(db, storage, registry):
 @with_hub_db
 def _queue(db, storage, registry):
     res = []
-    for ts, uid, user_id in queue:
-        elem = storage.get(uid, None)
-        elem['uid'] = uid
-        elem['ts_add'] = ts
-        elem['num_votes'] = db.session.query(Vote).filter_by(song_id=uid,
-                                                             timestamp=ts).count()
-        elem['self_vote'] = db.session.query(Vote).filter_by(song_id=uid,
-                                                             timestamp=ts,
-                                                             user_id=user_id).count()
-        elem['added_by'] = User.get(db, user_id).dict()
+    queue = db.session.query(QueueEntry).filter_by(waiting=True).\
+      order_by(QueueEntry.timestamp)
+
+    for entry in queue:
+        elem = storage.get(entry.song_id, None)
+        elem['uid'] = entry.song_id
+        elem['ts_add'] = entry.timestamp
+        elem['num_votes'] = db.session.query(Vote).filter_by(
+            song_id=entry.song_id, timestamp=entry.timestamp).count()
+        elem['self_vote'] = db.session.query(Vote).filter_by(
+            song_id=entry.song_id, timestamp=entry.timestamp,
+            user_id=entry.user_id).count()
+        elem['added_by'] = User.get(db, entry.user_id).dict()
         res.append(elem)
     return json.dumps(res)
 
@@ -111,7 +118,9 @@ def _search(db, storage, registry, term):
     if res:
         ts = int(time.time())
         meta = random.choice(res)
-        queue.append((ts, meta['uid'], session['user_id']))
+        db.session.add(QueueEntry(timestamp=ts, user_id=session['user_id'],
+                                  song_id=meta['uid']))
+        db.session.commit()
         broadcast('add', {
             'song': song(storage, meta['uid']),
             'user': User.get(storage.db, session['user_id']).dict(),
