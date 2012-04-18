@@ -47,7 +47,7 @@ class NodeStorage(Storage):
         last_sent = self.last_sent or 0
         for obj in self.db.query(self._songClass).\
                 filter(self._songClass.timestamp > last_sent):
-            song = obj.dict()
+            song = obj.dict(private=True)
             # no need for remote host to know this
             del song['fpath']
             yield song

@@ -29,7 +29,7 @@ class FacebookAuthenticator(OAuthAuthenticator):
         return self._facebook
 
     def get_user_data(self):
-            return self._facebook.get('/me?fields=id,name,picture')
+            return self._facebook.get('/me?fields=id,name,picture').data
 
 
 class GitHubAuthenticator(OAuthAuthenticator):

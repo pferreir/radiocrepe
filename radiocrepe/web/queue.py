@@ -81,7 +81,7 @@ def _notify_start(db, storage, registry):
 @with_hub_db
 def _notify_stop(db, storage, registry):
     global playing
-    broadcast('stop', song(storage, playing.uid), ts=playing.timestamp)
+    broadcast('stop', song(storage, playing.song_id), ts=playing.timestamp)
     playing = None
     return ''
 
